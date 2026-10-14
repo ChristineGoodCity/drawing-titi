@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Suisse Intl Mono";
+  src: url("../assets/fonts/Suisse-Intl-Mono.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Suisse Intl Mono", ui-monospace, monospace;
+  --font-display: "Suisse Intl Mono", ui-monospace, monospace;
+  --color-ink: #000000;
+  --color-background: #D9D9D9;
+  --color-paper: #ffffff;
+  --color-outline: #cccccc;
+  --color-divider: #dddddd;
+  --color-muted: #000000;
+  --color-subtle: #000000;
+  --color-accent: #000000;
+  --color-hover: #eeeeee;
+  --color-selected: #e5e5e5;
+  --color-selected-ink: #000000;
+}
+
+@layer base {
+  :root {
+    @apply bg-background font-sans text-ink antialiased;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+  body { min-width: 320px; }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+}
