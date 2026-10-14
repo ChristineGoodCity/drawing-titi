@@ -17,7 +17,7 @@ Add a `Brush` to `src/lib/drawing/brushes.ts`. Each brush supplies an ID, a name
 
 `src/components/DrawingCanvas.tsx` handles pointer capture and coordinate mapping. `src/lib/drawing/engine.ts` handles stroke interpolation, independently of React. Brush settings are frozen for each stroke.
 
-This starter includes pen, paint marker, and grain brushes, size and color controls, and clear. Artwork is in memory only. Undo, export, advanced smoothing, and image brush loading are future additions. The drawing surface uses a fixed 1200 × 400 backing canvas so layout changes preserve artwork.
+This starter includes pen, paint marker, grain, and image-based spray brushes, size and color controls, and clear. Artwork is in memory only. Undo, export, advanced smoothing, are future additions. The drawing surface uses a fixed 1200 × 400 backing canvas so layout changes preserve artwork.
 
 ## Structure
 
@@ -27,3 +27,7 @@ This starter includes pen, paint marker, and grain brushes, size and color contr
 - `src/App.tsx`: application composition.
 
 Tailwind uses the official Vite plugin. Component styling uses utility classes; shared colors and fonts live in the CSS theme.
+
+Spray uses the supplied `src/assets/brushes/spray-source.png`; Spray Drip uses the generated `src/assets/brushes/spray-original.png`. Each has its own texture cache. Its loader converts brightness to transparency and caches a color-tinted tip. Holding down deposits more paint; release, cancellation, changing brushes, window blur, and hiding the tab stop the flow.
+
+The original spray tip was created with built-in imagegen. Prompt: a centered black aerosol dab with a dense center, fine discrete droplets fading into sparse overspray, clean transparent margins, and no text, can, paper, or border.

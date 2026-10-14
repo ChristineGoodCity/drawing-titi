@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent } from "react";
+import { useEffect, useState, useRef, type PointerEvent } from "react";
 import type { Brush, BrushSettings, Point } from "../lib/drawing/brushes";
 import { drawSegment } from "../lib/drawing/engine";
 
@@ -12,6 +12,34 @@ export function DrawingCanvas({ brush, settings }: Props) {
     settings: BrushSettings;
     direction?: number;
   } | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [loaded, setLoaded] = useState({ id: "", error: false });
+  const ready = !brush.prepare || (loaded.id === brush.id && !loaded.error);
+  function stop() {
+    if (timer.current !== null) clearInterval(timer.current);
+    timer.current = null;
+    stroke.current = null;
+  }
+  useEffect(() => {
+    let cancelled = false;
+    if (brush.prepare) {
+      brush.prepare().then(
+        () => { if (!cancelled) setLoaded({ id: brush.id, error: false }); },
+        () => { if (!cancelled) setLoaded({ id: brush.id, error: true }); },
+      );
+    }
+    return () => { cancelled = true; stop(); };
+  }, [brush]);
+  useEffect(() => {
+    const onVisibility = () => { if (document.hidden) stop(); };
+    window.addEventListener("blur", stop);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      window.removeEventListener("blur", stop);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
   function point(event: PointerEvent<HTMLCanvasElement>): Point {
     const rect = event.currentTarget.getBoundingClientRect();
     return {
@@ -22,18 +50,25 @@ export function DrawingCanvas({ brush, settings }: Props) {
     };
   }
   function begin(event: PointerEvent<HTMLCanvasElement>) {
-    if (event.button !== 0 || stroke.current) return;
+    if (!ready || event.button !== 0 || stroke.current) return;
     const ctx = event.currentTarget.getContext("2d");
     if (!ctx) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     const start = point(event);
+    const strokeBrush = brush.createStroke?.() ?? brush;
     stroke.current = {
       pointerId: event.pointerId,
       point: start,
-      brush,
+      brush: strokeBrush,
       settings: { ...settings },
     };
-    brush.stamp(ctx, start, settings);
+    strokeBrush.stamp(ctx, start, settings);
+    if (brush.continuous) {
+      timer.current = setInterval(() => {
+        const active = stroke.current;
+        if (active) active.brush.stamp(ctx, active.point, active.settings);
+      }, 40);
+    }
   }
   function move(event: PointerEvent<HTMLCanvasElement>) {
     const active = stroke.current;
@@ -59,10 +94,11 @@ export function DrawingCanvas({ brush, settings }: Props) {
         active.brush.finish?.(ctx, active.point, active.settings, active.direction);
       }
     }
-    stroke.current = null;
+    stop();
   }
   return (
     <>
+      {!ready && <p role="status" className="px-4 py-2 text-xs">{loaded.id === brush.id && loaded.error ? "Could not load spray tip. Please reload to retry." : "Loading spray tip…"}</p>}
       <canvas
         className="block h-auto w-full touch-none"
         style={{ cursor: `url("${import.meta.env.BASE_URL}spray-paint-outlined.png") 10 6, crosshair` }}
