@@ -119,7 +119,12 @@ export function DrawingCanvas({ brush, settings }: Props) {
   }
   function end(event: PointerEvent<HTMLCanvasElement>) {
     if (stroke.current?.pointerId !== event.pointerId) return;
-    if (event.type === "pointerup") move(event);
+    if (event.type === "pointerup") {
+      move(event);
+      const active = stroke.current;
+      const ctx = event.currentTarget.getContext("2d");
+      if (active && ctx) active.brush.finish?.(ctx, active.point, active.settings);
+    }
     stop();
   }
   return (

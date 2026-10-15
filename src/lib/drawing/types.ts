@@ -12,6 +12,8 @@ export interface Brush {
   prepare?: () => Promise<void>;
   continuous?: boolean;
   spacing?: number;
+  // Called only on a normal pointer release, never cancellation or blur.
+  finish?(ctx: CanvasRenderingContext2D, point: Point, settings: BrushSettings): void;
   stamp(
     ctx: CanvasRenderingContext2D,
     point: Point,
