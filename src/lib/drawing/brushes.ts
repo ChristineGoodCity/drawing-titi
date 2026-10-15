@@ -1,3 +1,6 @@
+import { dirtySprayBrush, dirtyDripBrush } from "./dirtySpray";
+import { inkSplashBrush } from "./inkSplash";
+import { dryPaintBrush } from "./dryPaint";
 import { sprayBrush, originalSprayBrush } from "./spray";
 
 export type Point = {
@@ -31,6 +34,10 @@ export interface Brush {
 export const brushes: Brush[] = [
   sprayBrush,
   originalSprayBrush,
+  dirtySprayBrush,
+  dirtyDripBrush,
+  dryPaintBrush,
+  inkSplashBrush,
   {
     id: "paint-marker",
     name: "Paint marker",
