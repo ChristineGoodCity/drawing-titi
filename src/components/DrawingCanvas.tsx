@@ -98,7 +98,7 @@ export function DrawingCanvas({ brush, settings }: Props) {
   }
   return (
     <>
-      {!ready && <p role="status" className="px-4 py-2 text-xs">{loaded.id === brush.id && loaded.error ? "Could not load brush tip. Please reload to retry." : "Loading brush tip…"}</p>}
+      {loaded.id === brush.id && loaded.error && <p role="status" className="text-xs">Could not load brush tip. Please reload to retry.</p>}
       <canvas
         className="block h-auto w-full touch-none"
         style={{ cursor: `url("${import.meta.env.BASE_URL}spray-paint-outlined.png") 10 6, crosshair` }}
