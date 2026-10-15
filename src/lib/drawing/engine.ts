@@ -1,4 +1,4 @@
-import type { Brush, BrushSettings, Point } from './brushes'
+import type { Brush, BrushSettings, Point } from './types'
 
 export function drawSegment(ctx: CanvasRenderingContext2D, brush: Brush, settings: BrushSettings, from: Point, to: Point) {
   const distance = Math.hypot(to.x - from.x, to.y - from.y)

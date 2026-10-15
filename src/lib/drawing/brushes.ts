@@ -3,32 +3,8 @@ import { inkSplashBrush } from "./inkSplash";
 import { dryPaintBrush } from "./dryPaint";
 import { sprayBrush, originalSprayBrush } from "./spray";
 
-export type Point = {
-  x: number;
-  y: number;
-  pressure: number;
-  direction?: number;
-};
-export type BrushSettings = { color: string; size: number };
-export interface Brush {
-  id: string;
-  name: string;
-  createStroke?: () => Brush;
-  prepare?: () => Promise<void>;
-  continuous?: boolean;
-  spacing?: number;
-  stamp(
-    ctx: CanvasRenderingContext2D,
-    point: Point,
-    settings: BrushSettings,
-  ): void;
-  finish?(
-    ctx: CanvasRenderingContext2D,
-    point: Point,
-    settings: BrushSettings,
-    direction: number,
-  ): void;
-}
+import type { Brush } from "./types";
+export type { Brush, BrushSettings, Point } from "./types";
 
 // Add your own brush here. A stamp can draw shapes or a transparent image.
 export const brushes: Brush[] = [

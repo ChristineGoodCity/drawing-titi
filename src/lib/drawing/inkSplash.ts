@@ -1,64 +1,68 @@
-import type { Brush, BrushSettings, Point } from './brushes'
+import type { Brush, BrushSettings, Point } from './types'
 
-function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings) {
-  const width = size * (0.75 + point.pressure * 0.25)
-  ctx.save()
-  ctx.translate(point.x, point.y)
-  ctx.rotate(point.direction ?? 0)
-  ctx.fillStyle = color
-  // A solid middle and separate, uneven bristles create a dragged-paint edge.
+// Rounded, irregular pigment islands instead of bristles or a soft spray haze.
+function blot(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number) {
   ctx.beginPath()
-  ctx.ellipse(0, 0, width * 0.27, width * 0.39, 0, 0, Math.PI * 2)
-  ctx.fill()
-  for (let i = 0; i < 31; i++) {
-    const across = (i / 30 - 0.5) * width
-    const length = width * (0.32 + 0.2 * Math.sin(i * 9.7) ** 2)
-    ctx.globalAlpha = Math.abs(across) > width * 0.4 ? 0.6 : 1
-    ctx.fillRect(-length * 0.55, across, length, Math.max(0.5, width * 0.021))
-  }
-  ctx.restore()
-}
-
-function splash(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings) {
-  const side = Math.random() < 0.5 ? -1 : 1
-  const angle = (point.direction ?? 0) + side * Math.PI / 2
-  const x = point.x + Math.cos(angle) * size * 0.37
-  const y = point.y + Math.sin(angle) * size * 0.37
-  ctx.save()
-  ctx.fillStyle = ctx.strokeStyle = color
-  ctx.lineCap = 'round'
-  ctx.beginPath()
-  for (let i = 0; i < 24; i++) {
-    const a = i / 24 * Math.PI * 2
-    const radius = size * (i % 2 ? 0.08 : 0.14 + Math.random() * 0.16)
-    const px = x + Math.cos(a) * radius
-    const py = y + Math.sin(a) * radius
+  for (let i = 0; i < 12; i++) {
+    const angle = i / 12 * Math.PI * 2
+    const r = radius * (0.65 + Math.random() * 0.55)
+    const px = x + Math.cos(angle) * r
+    const py = y + Math.sin(angle) * r
     if (i === 0) ctx.moveTo(px, py)
     else ctx.lineTo(px, py)
   }
   ctx.closePath()
   ctx.fill()
-  for (let i = 0; i < 9; i++) {
-    const a = angle + (Math.random() - 0.5) * 2.6
-    const distance = size * (0.2 + Math.random() * 0.65)
-    ctx.beginPath()
-    ctx.arc(x + Math.cos(a) * distance, y + Math.sin(a) * distance,
-      Math.max(0.65, size * (0.008 + Math.random() ** 2 * 0.055)), 0, Math.PI * 2)
-    ctx.fill()
+}
+
+function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings, pool = false) {
+  const width = size * (0.75 + point.pressure * 0.25) * (pool ? 1.3 : 1)
+  ctx.save()
+  ctx.translate(point.x, point.y)
+  ctx.rotate(point.direction ?? 0)
+  ctx.fillStyle = color
+  ctx.globalAlpha = 1
+  // Opaque core, with a gently uneven silhouette along the stroke.
+  const phase = (point.x * 0.8 + point.y * 0.6) / Math.max(size, 1)
+  const radius = width * (0.37 + Math.sin(phase * 3) * 0.035)
+  ctx.beginPath()
+  ctx.ellipse(0, 0, width * 0.3, radius, 0, 0, Math.PI * 2)
+  ctx.fill()
+  for (let i = 0; i < 30; i++) {
+    const angle = Math.random() * Math.PI * 2
+    const spread = 0.85 + Math.random() * 0.55
+    blot(ctx, Math.cos(angle) * width * 0.3 * spread,
+      Math.sin(angle) * radius * spread, width * (0.012 + Math.random() ** 2 * 0.065))
   }
-  // Occasional thin gravity run under a pooled splash.
-  if (side > 0 && Math.random() < 0.55) {
-    ctx.lineWidth = Math.max(1, size * 0.035)
+  // Sparse, crisp droplets leave transparent gaps around the ragged edge.
+  for (let i = 0; i < (pool ? 45 : 12); i++) {
+    const angle = Math.random() * Math.PI * 2
+    const spread = width * (0.48 + Math.random() ** 2 * 0.65)
+    const r = Math.max(0.35, width * (0.004 + Math.random() ** 3 * 0.035))
+    blot(ctx, Math.cos(angle) * spread, Math.sin(angle) * spread, r)
+  }
+  ctx.restore()
+}
+
+function splash(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings) {
+  ctx.save()
+  ctx.fillStyle = color
+  ctx.translate(point.x, point.y)
+  ctx.rotate(point.direction ?? 0)
+  for (let i = 0; i < 4; i++) {
+    const angle = Math.random() * Math.PI * 2
+    const distance = size * (0.6 + Math.random() * 0.55)
+    const radius = size * (0.025 + Math.random() * 0.045)
     ctx.beginPath()
-    ctx.moveTo(x, y)
-    ctx.quadraticCurveTo(x + size * 0.04, y + size * 0.35, x - size * 0.03, y + size * 0.7)
-    ctx.stroke()
+    ctx.ellipse(Math.cos(angle) * distance, Math.sin(angle) * distance,
+      radius * (1.2 + Math.random()), radius * 0.65, angle, 0, Math.PI * 2)
+    ctx.fill()
   }
   ctx.restore()
 }
 
 export const inkSplashBrush: Brush = {
-  id: 'ink-splash', name: 'Ink splash', spacing: 0.08,
+  id: 'ink-splash', name: 'Ink splash', spacing: 0.14,
   stamp: paint,
   createStroke() {
     let previous: Point | undefined
@@ -67,12 +71,12 @@ export const inkSplashBrush: Brush = {
     return {
       ...inkSplashBrush,
       stamp(ctx, point, settings) {
-        paint(ctx, point, settings)
+        paint(ctx, point, settings, !previous)
         if (previous) distance += Math.hypot(point.x - previous.x, point.y - previous.y)
         if (!previous || distance >= next) {
           splash(ctx, point, settings)
           distance = 0
-          next = settings.size * (2.5 + Math.random() * 3)
+          next = settings.size * (1.5 + Math.random() * 2)
         }
         previous = point
       },

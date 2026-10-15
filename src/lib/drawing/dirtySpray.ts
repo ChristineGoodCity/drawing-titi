@@ -1,4 +1,5 @@
-import type { Brush, BrushSettings, Point } from './brushes'
+import { withDrips } from './drippingSpray'
+import type { Brush, BrushSettings, Point } from './types'
 
 function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings) {
   const phase = (point.x * 0.7 + point.y * 0.8) / Math.max(size, 1)
@@ -31,49 +32,17 @@ function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: Bru
   ctx.restore()
 }
 
-function createDirtyBrush(dripping: boolean): Brush {
-  const brush: Brush = {
-    id: dripping ? 'dirty-drip' : 'dirty-spray',
-    name: dripping ? 'Dirty drip' : 'Dirty spray',
-    continuous: true,
-    spacing: 0.12,
-    stamp: paint,
-    createStroke() {
-      let previous: Point | undefined
-      let distance = 0
-      let threshold = 0
-      return {
-        ...brush,
-        stamp(ctx, point, settings) {
-          paint(ctx, point, settings)
-          if (!dripping) return
-          const { size, color } = settings
-          if (!previous) threshold = size * (1 + Math.random())
-          else distance += Math.hypot(point.x - previous.x, point.y - previous.y)
-          previous = point
-          if (distance < threshold) return
-          distance = 0
-          threshold = size * (4 + Math.random() * 4)
-          const length = size * (0.25 + Math.random() * 0.35)
-          const width = size * (0.08 + Math.random() * 0.05)
-          const top = point.y + size * 0.2
-          const bottom = top + length
-          ctx.save()
-          ctx.fillStyle = color
-          ctx.beginPath()
-          ctx.moveTo(point.x - width, top)
-          ctx.quadraticCurveTo(point.x - width * 0.4, top + length * 0.35, point.x - width * 0.35, bottom)
-          ctx.quadraticCurveTo(point.x, bottom + width * 0.8, point.x + width * 0.35, bottom)
-          ctx.quadraticCurveTo(point.x + width * 0.4, top + length * 0.3, point.x + width, top)
-          ctx.closePath()
-          ctx.fill()
-          ctx.restore()
-        },
-      }
-    },
-  }
-  return brush
+export const dirtySprayBrush: Brush = {
+  id: 'dirty-spray',
+  name: 'Dirty spray',
+  continuous: true,
+  spacing: 0.12,
+  stamp: paint,
 }
 
-export const dirtySprayBrush = createDirtyBrush(false)
-export const dirtyDripBrush = createDirtyBrush(true)
+// Share drip behavior while retaining the dirty brush's textured core.
+export const dirtyDripBrush = withDrips({
+  ...dirtySprayBrush,
+  id: 'dirty-drip',
+  name: 'Dirty drip',
+}, false)

@@ -17,7 +17,7 @@ Add a `Brush` to `src/lib/drawing/brushes.ts`. Each brush supplies an ID, a name
 
 `src/components/DrawingCanvas.tsx` handles pointer capture and coordinate mapping. `src/lib/drawing/engine.ts` handles stroke interpolation, independently of React. Brush settings are frozen for each stroke.
 
-This starter includes pen, paint marker, grain, and image-based spray brushes, size and color controls, and clear. Artwork is in memory only. Undo, export, advanced smoothing, are future additions. The drawing surface uses a fixed 1200 × 400 backing canvas so layout changes preserve artwork.
+The app includes pen, paint marker, grain, dry paint, ink splash, and spray variants, size and color controls, and clear. Artwork is in memory only. Undo, export, and advanced smoothing are future additions. The drawing surface uses 1200 × 400 logical coordinates with a 2×–4× backing canvas based on display pixel density and rendered width. Resizing preserves artwork; new strokes use the higher resolution.
 
 ## Structure
 
@@ -31,3 +31,5 @@ Tailwind uses the official Vite plugin. Component styling uses utility classes; 
 Spray uses the supplied `src/assets/brushes/spray-source.png`; Spray Drip uses the generated `src/assets/brushes/spray-original.png`. Each has its own texture cache. Its loader converts brightness to transparency and caches a color-tinted tip. Holding down deposits more paint; release, cancellation, changing brushes, window blur, and hiding the tab stop the flow.
 
 The original spray tip was created with built-in imagegen. Prompt: a centered black aerosol dab with a dense center, fine discrete droplets fading into sparse overspray, clean transparent margins, and no text, can, paper, or border.
+
+Image brushes share `src/lib/drawing/imageTip.ts` for one-time image decoding and cached tinting. Dry paint reuses its scratch canvas and grain pattern between stamps. Brush interfaces live in `src/lib/drawing/types.ts`; the registry only assembles brush options.
