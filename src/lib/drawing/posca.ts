@@ -26,7 +26,10 @@ function pigmentMask() {
     for (let x = 0; x < 256; x++) {
       // Fine, restrained grain: the marker stays filled instead of looking watery.
       const grain = noise(x, y, 32) * 0.65 + noise(x, y, 64) * 0.35
-      const coverage = 0.62 + grain * 0.36
+      // Restrained pigment thinning beneath the fine grain, with no transparent holes.
+      const wash = noise(x, y, 8) * 0.7 + noise(x, y, 16) * 0.3
+      const fade = Math.max(0, (wash - 0.42) / 0.58)
+      const coverage = (0.62 + grain * 0.36) * (1 - fade * 0.3)
       const i = (y * 256 + x) * 4
       pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = 255
       pixels.data[i + 3] = coverage * 255
@@ -36,7 +39,7 @@ function pigmentMask() {
   return pigment
 }
 
-function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings) {
+function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings, opacity = 0.24) {
   const phase = (point.x * 0.6 + point.y * 0.8) / Math.max(size, 1)
   const radius = size * 0.5 * (0.72 + point.pressure * 0.28) * (1 + 0.012 * Math.sin(phase * 1.7))
   const extent = Math.ceil(size * 1.6 + 4)
@@ -50,11 +53,13 @@ function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: Bru
   dab.setTransform(resolution, 0, 0, resolution, 0, 0)
   dab.globalCompositeOperation = 'source-over'
   dab.fillStyle = color
-  // Align the square nib with the stroke so the leading and trailing edges are flat.
+  // A short, soft-cornered chisel leaves a flat marker edge without a square tile.
   dab.save()
   dab.translate(point.x - left, point.y - top)
   dab.rotate(point.direction ?? 0)
-  dab.fillRect(-radius, -radius, radius * 2, radius * 2)
+  dab.beginPath()
+  dab.roundRect(-radius * 0.65, -radius, radius * 1.3, radius * 2, radius * 0.38)
+  dab.fill()
   dab.restore()
   // Keep fine pigment grain anchored to the surface between overlapping dabs.
   pattern ??= dab.createPattern(pigmentMask(), 'repeat')!
@@ -64,7 +69,7 @@ function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: Bru
   dab.fillStyle = pattern
   dab.fillRect(0, 0, extent, extent)
   ctx.save()
-  ctx.globalAlpha = 0.1 * point.pressure
+  ctx.globalAlpha = opacity * point.pressure
   ctx.drawImage(scratch, left, top, extent, extent)
   ctx.restore()
 }
@@ -73,5 +78,18 @@ export const poscaBrush: Brush = {
   id: 'posca',
   name: 'Posca',
   spacing: 0.045,
-  stamp: paint,
+  stamp(ctx, point, settings) { paint(ctx, point, settings, 0.85) },
+  createStroke() {
+    let started = false
+    return {
+      ...poscaBrush,
+      stamp(ctx, point, settings) {
+        paint(ctx, point, settings, started ? 0.24 : 0.85)
+        started = true
+      },
+      finish(ctx, point, settings) {
+        paint(ctx, point, settings, 0.65)
+      },
+    }
+  },
 }
