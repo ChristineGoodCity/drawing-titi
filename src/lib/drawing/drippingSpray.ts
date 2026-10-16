@@ -18,14 +18,16 @@ export function withDrips(base: Brush, wetCore = true): Brush {
     createStroke() {
       const drips: Drip[] = []
       let previous: Point | undefined
+      let start: Point | undefined
+      let hasMoved = false
       let anchor: Point | undefined
       let heldSince = performance.now()
-      let holdDelay = 450 + Math.random() * 250
+      let holdDelay = 2000 + Math.random() * 250
       let pooled = false
       let heading: number | undefined
       let lastDrip: Point | undefined
       let travel = 0
-      let nextChance = 4 + Math.random() * 4
+      let nextChance = 6 + Math.random() * 5
       let lastTime = performance.now()
       function canDrip(point: Point, size: number) {
         return !lastDrip || Math.hypot(point.x - lastDrip.x, point.y - lastDrip.y) >= size * 0.8
@@ -58,7 +60,7 @@ export function withDrips(base: Brush, wetCore = true): Brush {
         }
         lastDrip = { ...point }
         travel = 0
-        nextChance = 4 + Math.random() * 4
+        nextChance = 6 + Math.random() * 5
         while (drips.length > 32) drips.shift()
       }
       function render(ctx: CanvasRenderingContext2D, { size, color }: BrushSettings, dt: number) {
@@ -99,7 +101,7 @@ export function withDrips(base: Brush, wetCore = true): Brush {
       return {
         ...base,
         finish(ctx, point, settings) {
-          if (canDrip(point, settings.size) && Math.random() < 0.5) addDrips(point, settings)
+          if (hasMoved && canDrip(point, settings.size) && Math.random() < 0.5) addDrips(point, settings)
           render(ctx, settings, 0)
         },
         stamp(ctx, point, settings) {
@@ -118,31 +120,35 @@ export function withDrips(base: Brush, wetCore = true): Brush {
             ctx.fill()
             ctx.restore()
           }
-          const first = !previous
+          start ??= { ...point }
+          // Delay start drips until this is a real stroke, not a click or hand tremor.
+          if (!hasMoved && Math.hypot(point.x - start.x, point.y - start.y) >= Math.max(12, size)) {
+            hasMoved = true
+            if (canDrip(start, size) && Math.random() < 0.4) addDrips(start, settings)
+          }
           if (!anchor || Math.hypot(point.x - anchor.x, point.y - anchor.y) > Math.max(2, size * 0.2)) {
             anchor = { ...point }
             heldSince = now
-            holdDelay = 450 + Math.random() * 250
+            holdDelay = 2000 + Math.random() * 250
             pooled = false
           }
           const step = previous ? Math.hypot(point.x - previous.x, point.y - previous.y) : 0
           // Distance-based opportunities keep the odds independent of pointer event rate.
-          travel += step / size
+          if (hasMoved) travel += step / size
           if (travel >= nextChance) {
             travel = 0
-            nextChance = 4 + Math.random() * 4
-            if (canDrip(point, size) && Math.random() < 0.3) addDrips(point, settings)
+            nextChance = 6 + Math.random() * 5
+            if (canDrip(point, size) && Math.random() < 0.12) addDrips(point, settings)
           }
-          if (previous && step > 0.01) {
+          if (hasMoved && previous && step > 0.01) {
             const direction = Math.atan2(point.y - previous.y, point.x - previous.x)
             const turn = heading === undefined ? 0 : Math.abs(Math.atan2(Math.sin(direction - heading), Math.cos(direction - heading)))
             // Only consider a turn once, not on every interpolated stamp afterward.
-            if (turn > Math.PI / 3 && canDrip(point, size) && Math.random() < 0.55) {
+            if (turn > Math.PI * 0.45 && canDrip(point, size) && Math.random() < 0.55) {
               addDrips(point, settings)
             }
             heading = direction
           }
-          if (first && Math.random() < 0.4) addDrips(point, settings)
           // A sustained hold guarantees a pool; don't stack new drips on that same pool.
           if (!pooled && now - heldSince >= holdDelay) {
             if (canDrip(point, size)) addDrips(point, settings)
