@@ -39,7 +39,7 @@ function pigmentMask() {
 function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings) {
   const phase = (point.x * 0.6 + point.y * 0.8) / Math.max(size, 1)
   const radius = size * 0.5 * (0.72 + point.pressure * 0.28) * (1 + 0.012 * Math.sin(phase * 1.7))
-  const extent = Math.ceil(size * 1.3 + 4)
+  const extent = Math.ceil(size * 1.6 + 4)
   const resolution = Math.max(1, Math.ceil(Math.abs(ctx.getTransform().a)))
   const left = Math.floor(point.x - extent / 2), top = Math.floor(point.y - extent / 2)
   scratch ??= document.createElement('canvas')
@@ -50,17 +50,12 @@ function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: Bru
   dab.setTransform(resolution, 0, 0, resolution, 0, 0)
   dab.globalCompositeOperation = 'source-over'
   dab.fillStyle = color
-  dab.beginPath()
-  for (let i = 0; i < 64; i++) {
-    const angle = i / 64 * Math.PI * 2
-    const edge = radius * (1 + 0.008 * Math.sin(angle * 13 + phase * 4))
-    const x = point.x - left + Math.cos(angle) * edge
-    const y = point.y - top + Math.sin(angle) * edge
-    if (i === 0) dab.moveTo(x, y)
-    else dab.lineTo(x, y)
-  }
-  dab.closePath()
-  dab.fill()
+  // Align the square nib with the stroke so the leading and trailing edges are flat.
+  dab.save()
+  dab.translate(point.x - left, point.y - top)
+  dab.rotate(point.direction ?? 0)
+  dab.fillRect(-radius, -radius, radius * 2, radius * 2)
+  dab.restore()
   // Keep fine pigment grain anchored to the surface between overlapping dabs.
   pattern ??= dab.createPattern(pigmentMask(), 'repeat')!
   const textureScale = size / 100
