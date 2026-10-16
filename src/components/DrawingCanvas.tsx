@@ -15,9 +15,14 @@ export function DrawingCanvas({ brush, settings }: Props) {
     settings: BrushSettings;
   } | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animation = useRef<number | null>(null);
+  const flowing = useRef<{ brush: Brush; settings: BrushSettings }[]>([]);
   const [loaded, setLoaded] = useState({ id: "", error: false });
   const ready = !brush.prepare || (loaded.id === brush.id && !loaded.error);
   function stop() {
+    if (animation.current !== null) cancelAnimationFrame(animation.current);
+    animation.current = null;
+    flowing.current = [];
     if (timer.current !== null) clearInterval(timer.current);
     timer.current = null;
     stroke.current = null;
@@ -95,6 +100,22 @@ export function DrawingCanvas({ brush, settings }: Props) {
       settings: { ...settings },
     };
     strokeBrush.stamp(ctx, start, settings);
+    if (strokeBrush.animate) {
+      flowing.current.push({ brush: strokeBrush, settings: { ...settings } });
+      if (animation.current === null) {
+        let lastFrame = performance.now();
+        const frame = (now: number) => {
+          const dt = Math.min(0.05, (now - lastFrame) / 1000);
+          lastFrame = now;
+          flowing.current = flowing.current.filter((flow) => {
+            const wet = flow.brush.animate?.(ctx, flow.settings, dt);
+            return wet || stroke.current?.brush === flow.brush;
+          });
+          animation.current = flowing.current.length ? requestAnimationFrame(frame) : null;
+        };
+        animation.current = requestAnimationFrame(frame);
+      }
+    }
     if (brush.continuous) {
       timer.current = setInterval(() => {
         const active = stroke.current;
@@ -125,7 +146,11 @@ export function DrawingCanvas({ brush, settings }: Props) {
       const ctx = event.currentTarget.getContext("2d");
       if (active && ctx) active.brush.finish?.(ctx, active.point, active.settings);
     }
-    stop();
+    // Release stops spraying, while deposited paint can finish running downward.
+    if (timer.current !== null) clearInterval(timer.current);
+    timer.current = null;
+    stroke.current = null;
+    if (event.type !== "pointerup") stop();
   }
   return (
     <>

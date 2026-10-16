@@ -9,6 +9,8 @@ type Drip = {
   bend: number
   taper: number
   drawn: number
+  age: number
+  duration: number
 }
 
 // Each pointer stroke owns its wet paint, so old drips never restart later.
@@ -16,6 +18,7 @@ export function withDrips(base: Brush, wetCore = true): Brush {
   return {
     ...base,
     createStroke() {
+      const strokeBase = base.createStroke?.() ?? base
       const drips: Drip[] = []
       let previous: Point | undefined
       let start: Point | undefined
@@ -28,7 +31,6 @@ export function withDrips(base: Brush, wetCore = true): Brush {
       let lastDrip: Point | undefined
       let travel = 0
       let nextChance = 6 + Math.random() * 5
-      let lastTime = performance.now()
       function canDrip(point: Point, size: number) {
         return !lastDrip || Math.hypot(point.x - lastDrip.x, point.y - lastDrip.y) >= size * 0.8
       }
@@ -38,16 +40,18 @@ export function withDrips(base: Brush, wetCore = true): Brush {
           ? 1.5 + Math.random() * 0.6
           : 0.7 + Math.random() * 0.65)
         const mainWidth = Math.max(2.5, size * (0.15 + Math.random() * 0.08))
-        const origin = point.x + (Math.random() - 0.5) * size * 0.15
+        const origin = point.x + (Math.random() - 0.5) * size * 0.04
         const paired = Math.random() < 0.3
         const side = Math.random() < 0.5 ? -1 : 1
         for (let i = 0; i < (paired ? 2 : 1); i++) {
           // A nearby companion is shorter and narrower, like pooled paint splitting.
           const max = i === 0 ? mainLength : mainLength * (0.5 + Math.random() * 0.25)
           drips.push({
-            x: origin + i * side * (mainWidth * 1.8 + size * 0.06),
-            y: point.y + size * 0.2,
-            length: max * 0.85,
+            // Begin inside the paint core, including narrow organic starts and endpoints.
+            // Center pairs around the stamp instead of pushing the companion outside it.
+            x: origin + (paired ? (i === 0 ? -1 : 1) * side * size * 0.13 : 0),
+            y: point.y,
+            length: 0,
             max,
             width: i === 0 ? mainWidth : mainWidth * (0.65 + Math.random() * 0.2),
             // Mix nearly even drips with ones that narrow noticeably downward.
@@ -56,6 +60,8 @@ export function withDrips(base: Brush, wetCore = true): Brush {
               : 0.1 + Math.random() * 0.1,
             bend: (Math.random() - 0.5) * size * 0.025,
             drawn: 0,
+            age: 0,
+            duration: 1.1 + Math.random() * 1.1,
           })
         }
         lastDrip = { ...point }
@@ -63,14 +69,17 @@ export function withDrips(base: Brush, wetCore = true): Brush {
         nextChance = 6 + Math.random() * 5
         while (drips.length > 32) drips.shift()
       }
-      function render(ctx: CanvasRenderingContext2D, { size, color }: BrushSettings, dt: number) {
+      function render(ctx: CanvasRenderingContext2D, { color }: BrushSettings, dt: number) {
         ctx.save()
         ctx.strokeStyle = color
         ctx.globalAlpha = 1
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         for (const drip of drips) {
-          drip.length = Math.min(drip.max, drip.length + dt * size * 0.6)
+          drip.age += dt
+          const t = Math.min(1, drip.age / drip.duration)
+          // Slow initial pooling, a flowing middle, then a gentle stop.
+          drip.length = drip.max * t * t * (3 - 2 * t)
           // Extend only the new section instead of repainting translucent trails.
           const start = drip.drawn
           const end = drip.length
@@ -100,15 +109,17 @@ export function withDrips(base: Brush, wetCore = true): Brush {
       }
       return {
         ...base,
+        animate(ctx, settings, dt) {
+          render(ctx, settings, dt)
+          return drips.length > 0
+        },
         finish(ctx, point, settings) {
           if (hasMoved && canDrip(point, settings.size) && Math.random() < 0.5) addDrips(point, settings)
           render(ctx, settings, 0)
         },
         stamp(ctx, point, settings) {
           const now = performance.now()
-          const dt = Math.min(0.08, (now - lastTime) / 1000)
-          lastTime = now
-          base.stamp(ctx, point, settings)
+          strokeBase.stamp(ctx, point, settings)
           const { size, color } = settings
           // A wet, opaque core distinguishes this from the light Spray brush.
           if (wetCore) {
@@ -155,7 +166,6 @@ export function withDrips(base: Brush, wetCore = true): Brush {
             pooled = true
           }
           previous = point
-          render(ctx, settings, dt)
         },
       }
     },

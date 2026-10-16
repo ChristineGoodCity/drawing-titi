@@ -4,7 +4,7 @@ import { DrawingCanvas } from "./DrawingCanvas";
 import { DrawingToolbar } from "./DrawingToolbar";
 
 export function DrawingStudio() {
-  const [brushId, setBrushId] = useState("paint-marker");
+  const [brushId, setBrushId] = useState("organic-drip");
   const [settings, setSettings] = useState<BrushSettings>({
     color: "#000000",
     size: 20,

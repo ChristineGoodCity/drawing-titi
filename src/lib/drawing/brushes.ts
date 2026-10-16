@@ -1,3 +1,5 @@
+import { poscaBrush } from "./posca";
+import { organicSprayBrush, organicDripBrush } from "./organicSpray";
 import { dirtySprayBrush, dirtyDripBrush } from "./dirtySpray";
 import { inkSplashBrush } from "./inkSplash";
 import { dryPaintBrush } from "./dryPaint";
@@ -12,8 +14,11 @@ export const brushes: Brush[] = [
   originalSprayBrush,
   dirtySprayBrush,
   dirtyDripBrush,
+  organicSprayBrush,
+  organicDripBrush,
   dryPaintBrush,
   inkSplashBrush,
+  poscaBrush,
   {
     id: "paint-marker",
     name: "Paint marker",
