@@ -39,7 +39,7 @@ function pigmentMask() {
   return pigment
 }
 
-function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings, opacity = 0.24) {
+export function paintMarkerTip(ctx: CanvasRenderingContext2D, point: Point, { color, size }: BrushSettings, opacity = 0.24, broad = false) {
   const phase = (point.x * 0.6 + point.y * 0.8) / Math.max(size, 1)
   const radius = size * 0.5 * (0.72 + point.pressure * 0.28) * (1 + 0.012 * Math.sin(phase * 1.7))
   const extent = Math.ceil(size * 1.6 + 4)
@@ -58,7 +58,21 @@ function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: Bru
   dab.translate(point.x - left, point.y - top)
   dab.rotate(point.direction ?? 0)
   dab.beginPath()
-  dab.roundRect(-radius * 0.65, -radius, radius * 1.3, radius * 2, radius * 0.38)
+  if (broad) {
+    dab.moveTo(-radius * 0.55, -radius * 0.9)
+    dab.lineTo(-radius * 0.43, -radius)
+    dab.lineTo(radius * 0.42, -radius)
+    dab.lineTo(radius * 0.55, -radius * 0.83)
+    dab.lineTo(radius * 0.51, -radius * 0.35)
+    dab.lineTo(radius * 0.57, radius * 0.12)
+    dab.lineTo(radius * 0.49, radius * 0.68)
+    dab.lineTo(radius * 0.38, radius)
+    dab.lineTo(-radius * 0.47, radius * 0.97)
+    dab.lineTo(-radius * 0.56, radius * 0.74)
+    dab.closePath()
+  } else {
+    dab.roundRect(-radius * 0.65, -radius, radius * 1.3, radius * 2, radius * 0.38)
+  }
   dab.fill()
   dab.restore()
   // Keep fine pigment grain anchored to the surface between overlapping dabs.
@@ -68,8 +82,18 @@ function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: Bru
   dab.globalCompositeOperation = 'destination-in'
   dab.fillStyle = pattern
   dab.fillRect(0, 0, extent, extent)
+  if (broad) {
+    // Preserve full coverage through turns with just a trace of pigment grain.
+    dab.save()
+    dab.clip()
+    dab.globalCompositeOperation = 'destination-over'
+    dab.globalAlpha = 0.96
+    dab.fillStyle = color
+    dab.fillRect(0, 0, extent, extent)
+    dab.restore()
+  }
   ctx.save()
-  ctx.globalAlpha = opacity * point.pressure
+  ctx.globalAlpha = broad ? opacity : opacity * point.pressure
   ctx.drawImage(scratch, left, top, extent, extent)
   ctx.restore()
 }
@@ -78,17 +102,17 @@ export const poscaBrush: Brush = {
   id: 'posca',
   name: 'Posca',
   spacing: 0.045,
-  stamp(ctx, point, settings) { paint(ctx, point, settings, 0.85) },
+  stamp(ctx, point, settings) { paintMarkerTip(ctx, point, settings, 0.85) },
   createStroke() {
     let started = false
     return {
       ...poscaBrush,
       stamp(ctx, point, settings) {
-        paint(ctx, point, settings, started ? 0.24 : 0.85)
+        paintMarkerTip(ctx, point, settings, started ? 0.24 : 0.85)
         started = true
       },
       finish(ctx, point, settings) {
-        paint(ctx, point, settings, 0.65)
+        paintMarkerTip(ctx, point, settings, 0.65)
       },
     }
   },
