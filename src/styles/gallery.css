@@ -11,8 +11,8 @@ body { margin: 0; min-width: 320px; background: #d4d4d4; color: #77776e; }
 .center-frame::before, .center-frame::after { content: ''; position: absolute; pointer-events: none; }
 .center-frame::before { inset: -100vh 0; border-left: 1px solid #34343012; border-right: 1px solid #34343012; }
 .center-frame::after { inset: 0 -100vw; border-top: 1px solid #34343012; border-bottom: 1px solid #34343012; }
-.center-images { position: absolute; inset: 0; overflow: hidden; }
-.center-images img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 350ms ease-in-out; }
+.center-images { position: absolute; inset: 0; overflow: hidden; isolation: isolate; background: #101923; }
+.center-images img { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: calc(var(--image-width) * var(--frame-scale)); height: calc(var(--image-height) * var(--frame-scale)); max-width: none; object-fit: cover; opacity: 0; transition: opacity 550ms ease-in-out 50ms; }
 .center-images img.is-visible { opacity: 1; }
 .gallery-drawings { position: absolute; left: 5%; top: 50%; width: 20%; height: 36svh; transform: translateY(-50%); pointer-events: none; }
 .gallery-drawings img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; }
@@ -51,8 +51,31 @@ button:focus-visible { outline: 1px solid #77776e; outline-offset: 4px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .gallery-wordmark-track { animation: none; }
-  .center-frame, .center-images img { transition: none; }
+  .center-frame, .center-images img, .center-images img.is-visible { transition: none; }
 }
 
 @media (max-width: 680px) { .center-gallery { --frame-scale: 1.5; } }
 @media (max-width: 460px), (max-height: 560px) { .center-gallery { --frame-scale: 1; } }
+
+.gallery-switcher { height: 64px; padding: 12px 24px; display: flex; justify-content: center; align-items: center; gap: 6px; overflow-x: auto; border-bottom: 1px solid #34343012; }
+.gallery-switcher button { border: 1px solid transparent; background: transparent; padding: 10px 14px; color: #66665f; font: inherit; white-space: nowrap; cursor: pointer; }
+.gallery-switcher button[aria-selected=true] { border-color: #34343040; background: #ffffff30; color: #252523; }
+.gallery-comparison .center-gallery { height: calc(100svh - 64px); }
+.variant-gallery { height: calc(100svh - 64px); min-height: 400px; display: flex; flex-direction: column; padding: 24px 3.7vw 0; }
+.variant-stage { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; overflow: hidden; container-type: inline-size; }
+.variant-strip { position: relative; flex: none; border: 0; border-radius: 0; padding: 0; overflow: hidden; background: #c8c8c8; cursor: pointer; transition: width 420ms cubic-bezier(.2,.65,.3,1), height 420ms cubic-bezier(.2,.65,.3,1); }
+.variant-strip img { display: block; width: 100%; height: 100%; object-fit: fill; }
+.variant-strip span { position: absolute; bottom: 12px; left: 8px; color: white; font: 8px 'Suisse Intl Mono', monospace; text-shadow: 0 1px 3px #000; }
+.variant-strip:focus-visible { outline-offset: -4px; outline-color: white; }
+.variant-footer { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.variant-footer button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; margin-left: 15px; }
+@media (max-width: 680px) { .gallery-switcher { justify-content: flex-start; padding-inline: 12px; } .gallery-switcher button { padding-inline: 10px; } .variant-thumbnails button { width: 36px; height: 30px; } .variant-footer { font-size: 8px; } .scatter-photo figcaption { font-size: 6px; } }
+@media (prefers-reduced-motion: reduce) { .variant-strip, .free-frame, .scatter-photo { transition: none; } }
+
+
+
+.is-fullscreen-carousel .gallery-switcher { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10; width: max-content; max-width: calc(100% - 24px); height: auto; padding: 6px; border: 1px solid #ffffff40; background: #d4d4d4e8; }
+.is-fullscreen-carousel .variant-gallery { height: 100svh; min-height: 0; padding: 0; }
+.is-fullscreen-carousel .variant-stage { height: 100%; }
+.is-fullscreen-carousel .variant-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 26px 24px 18px; color: white; background: linear-gradient(transparent, #0008); pointer-events: none; }
+.is-fullscreen-carousel .variant-strip span { bottom: 64px; }
