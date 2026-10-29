@@ -6,4 +6,12 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: '/drawing-titi/',
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        gallery: 'gallery/index.html',
+      },
+    },
+  },
 })
