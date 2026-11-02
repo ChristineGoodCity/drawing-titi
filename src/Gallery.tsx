@@ -24,6 +24,9 @@ export default function Gallery() {
     <main
       className={`gallery-page ${showVersionSwitcher ? "gallery-comparison" : ""} ${(active === "skewed" || active === "vertical" || active === "mosaic") ? "is-fullscreen-carousel" : ""}`}
     >
+      <a className="gallery-drawing-link" href={import.meta.env.BASE_URL}>
+        Drawing
+      </a>
       {showVersionSwitcher && <nav
         className="gallery-switcher"
         role="tablist"

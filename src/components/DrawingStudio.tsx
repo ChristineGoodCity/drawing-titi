@@ -4,6 +4,7 @@ import { DrawingCanvas } from "./DrawingCanvas";
 import { DrawingToolbar } from "./DrawingToolbar";
 
 export function DrawingStudio() {
+  const [clearVersion, setClearVersion] = useState(0);
   const [brushId, setBrushId] = useState("organic-drip");
   const [settings, setSettings] = useState<BrushSettings>({
     color: "#000000",
@@ -13,16 +14,17 @@ export function DrawingStudio() {
 
   return (
     <section
-      className="overflow-hidden border border-black bg-paper shadow-[0_12px_40px_#00000008]"
+      className="relative h-full w-full overflow-hidden bg-background"
       aria-label="Drawing studio"
     >
       <DrawingToolbar
+        onClear={() => setClearVersion((version) => version + 1)}
         brushId={brushId}
         settings={settings}
         onBrushChange={setBrushId}
         onSettingsChange={setSettings}
       />
-      <DrawingCanvas brush={brush} settings={settings} />
+      <DrawingCanvas brush={brush} settings={settings} clearVersion={clearVersion} />
     </section>
   );
 }

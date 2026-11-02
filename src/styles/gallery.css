@@ -504,3 +504,24 @@ button:focus-visible {
   right: auto;
   --wordmark-width: clamp(32px, 6.5vw, 100px);
 }
+
+.gallery-drawing-link {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 11;
+  color: #171714;
+  font-size: 9px;
+  text-underline-offset: 4px;
+}
+.gallery-switcher {
+  right: 110px;
+}
+@media (max-width: 680px) {
+  .gallery-drawing-link {
+    right: 12px;
+  }
+  .gallery-switcher {
+    right: 94px;
+  }
+}

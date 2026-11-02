@@ -5,8 +5,8 @@ import { drawSegment } from "../lib/drawing/engine";
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 400;
 
-type Props = { brush: Brush; settings: BrushSettings };
-export function DrawingCanvas({ brush, settings }: Props) {
+type Props = { brush: Brush; settings: BrushSettings; clearVersion: number };
+export function DrawingCanvas({ brush, settings, clearVersion }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stroke = useRef<{
     pointerId: number;
@@ -51,24 +51,23 @@ export function DrawingCanvas({ brush, settings }: Props) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const resize = () => {
-      // Keep brush coordinates at 1200 × 400 while rendering at screen resolution.
-      // Never shrink the backing store: resizing the window must preserve detail.
-      const scale = Math.max(2, Math.min(4, Math.ceil(canvas.clientWidth * window.devicePixelRatio / CANVAS_WIDTH)));
-      const width = CANVAS_WIDTH * scale;
-      if (canvas.width < width) {
+      const scale = Math.min(4, Math.max(1, window.devicePixelRatio));
+      const width = Math.round(canvas.clientWidth * scale);
+      const height = Math.round(canvas.clientHeight * scale);
+      if (canvas.width !== width || canvas.height !== height) {
+        stop();
         const saved = document.createElement("canvas");
         saved.width = canvas.width;
         saved.height = canvas.height;
         saved.getContext("2d")!.drawImage(canvas, 0, 0);
+        const previousScale = canvas.getContext("2d")!.getTransform().a;
         canvas.width = width;
-        canvas.height = CANVAS_HEIGHT * scale;
+        canvas.height = height;
         const ctx = canvas.getContext("2d")!;
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(saved, 0, 0, width, canvas.height);
+        ctx.drawImage(saved, 0, 0, saved.width * scale / previousScale, saved.height * scale / previousScale);
       }
       const ctx = canvas.getContext("2d")!;
-      ctx.setTransform(canvas.width / CANVAS_WIDTH, 0, 0, canvas.height / CANVAS_HEIGHT, 0, 0);
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
     };
@@ -78,11 +77,16 @@ export function DrawingCanvas({ brush, settings }: Props) {
     window.addEventListener("resize", resize);
     return () => { observer.disconnect(); window.removeEventListener("resize", resize); };
   }, []);
+  useEffect(() => {
+    stop();
+    const canvas = canvasRef.current;
+    if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+  }, [clearVersion]);
   function point(event: PointerEvent<HTMLCanvasElement>): Point {
     const rect = event.currentTarget.getBoundingClientRect();
     return {
-      x: ((event.clientX - rect.left) * CANVAS_WIDTH) / rect.width,
-      y: ((event.clientY - rect.top) * CANVAS_HEIGHT) / rect.height,
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
       pressure: event.pointerType === "pen" ? Math.max(0.1, event.pressure) : 1,
     };
   }
@@ -154,9 +158,9 @@ export function DrawingCanvas({ brush, settings }: Props) {
   }
   return (
     <>
-      {loaded.id === brush.id && loaded.error && <p role="status" className="text-xs">Could not load brush tip. Please reload to retry.</p>}
+      {loaded.id === brush.id && loaded.error && <p role="status" className="absolute bottom-16 left-4 z-10 text-xs">Could not load brush tip. Please reload to retry.</p>}
       <canvas
-        className="block aspect-[3/1] h-auto w-full touch-none"
+        className="absolute inset-0 block h-full w-full touch-none"
         style={{ cursor: `url("${import.meta.env.BASE_URL}spray-paint-outlined.png") 10 6, crosshair` }}
         ref={canvasRef}
         width={CANVAS_WIDTH}
@@ -168,21 +172,6 @@ export function DrawingCanvas({ brush, settings }: Props) {
         onPointerCancel={end}
         onLostPointerCapture={end}
       />
-      <footer className="flex items-center justify-between border-t border-black px-4 py-2.5 text-xs text-subtle">
-        <span className="max-[540px]:max-w-1/2">
-          A little space for your ideas.
-        </span>
-        <button
-          className="rounded-[7px] px-3.5 py-2 text-[13px] hover:bg-hover"
-          onClick={() => {
-            stop();
-            canvasRef.current?.getContext("2d")
-              ?.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-          }}
-        >
-          Clear canvas
-        </button>
-      </footer>
     </>
   );
 }
