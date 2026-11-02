@@ -1,73 +1,75 @@
 import { useEffect, useState, type CSSProperties } from "react";
+import { drawingFiles, type Work } from "./components/galleryContent";
+import { useReducedMotion } from "./components/useReducedMotion";
 
-type Work = { file: string; name: string };
-const drawings = [
-  "Frame 13.svg",
-  "Frame 14.svg",
-  "Frame 15.svg",
-  "Frame 16.svg",
-  "Frame 17.svg",
-  "Frame 18.svg",
-  "Frame 19.svg",
+// The reference alternates size as well as proportion: compact portrait,
+// wide landscape, large square, then a smaller portrait before looping.
+const shapes = [
+  { width: 144, height: 192, label: "3:4" },
+  { width: 256, height: 192, label: "4:3" },
+  { width: 288, height: 288, label: "1:1" },
+  { width: 192, height: 224, label: "6:7" },
 ];
 
-// Centered square and rectangle animation.
-// Keep the area constant: narrowing one axis expands the other, never uniform scaling.
-const frameArea = 200 * 200;
-const shapes = [
-  { aspect: 4 / 5, label: "4:5" },
-  { aspect: 5 / 4, label: "5:4" },
-  { aspect: 1, label: "1:1" },
-  { aspect: 3 / 2, label: "3:2" },
-].map(({ aspect, label }) => ({
-  width: Math.sqrt(frameArea * aspect),
-  height: Math.sqrt(frameArea / aspect),
-  label,
-}));
+const aspectRatios = [
+  [[1, 2], [7, 15], [8, 15]],
+  [[9, 16], [8, 15], [3, 5]],
+  [[2, 3], [5, 8], [5, 7]],
+  [[3, 4], [5, 7], [4, 5]],
+  [[4, 5], [3, 4], [5, 6]],
+  [[1, 1], [15, 16], [16, 15]],
+  [[5, 4], [6, 5], [4, 3]],
+  [[4, 3], [5, 4], [7, 5]],
+  [[3, 2], [7, 5], [8, 5]],
+  [[16, 9], [5, 3], [15, 8]],
+  [[2, 1], [15, 8], [15, 7]],
+].map((pairs) => {
+  const variations = pairs.map(([width, height]) => ({
+    ratio: width / height, label: `${width}:${height}`,
+  }));
+  return { ...variations[0], variations };
+});
 
-// Keep photographs large enough for every frame shape; animate only the crop.
-const imageWidth = Math.max(...shapes.map((shape) => shape.width));
-const imageHeight = Math.max(...shapes.map((shape) => shape.height));
-
-export default function StretchGallery({ works }: { works: Work[] }) {
+export default function StretchGallery({ works, naturalAspect = false }: { works: Work[]; naturalAspect?: boolean }) {
+  const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
   const [step, setStep] = useState(0);
   const [drawingStep, setDrawingStep] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [reduced, setReduced] = useState(false);
+  const reduced = useReducedMotion();
   useEffect(() => {
-    const preference = matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(preference.matches);
-    update();
-    preference.addEventListener("change", update);
-    return () => preference.removeEventListener("change", update);
-  }, []);
-  useEffect(() => {
-    if (paused || reduced || works.length < 2) return;
-    const timer = setInterval(() => setStep((value) => value + 1), 1800);
+    if (reduced || works.length < 2) return;
+    const timer = setInterval(() => setStep((value) => value + 1), 2000);
     return () => clearInterval(timer);
-  }, [paused, reduced, works.length]);
+  }, [reduced, works.length]);
   useEffect(() => {
-    if (paused || reduced) return;
+    if (reduced) return;
     const timer = setInterval(() => setDrawingStep((value) => value + 1), 300);
     return () => clearInterval(timer);
-  }, [paused, reduced]);
+  }, [reduced]);
   const selected = step % works.length;
-  const selectedDrawing = drawingStep % drawings.length;
-  const shape = shapes[step % shapes.length];
+  const previous = step > 0 ? (step - 1) % works.length : -1;
+  const selectedDrawing = drawingStep % drawingFiles.length;
+  const ratio = imageRatios[works[selected]?.file] ?? 1;
+  // Snap the actual frame and its label to the nearest familiar proportion.
+  const aspect = aspectRatios.reduce((closest, candidate) =>
+    Math.abs(Math.log(candidate.ratio / ratio)) < Math.abs(Math.log(closest.ratio / ratio))
+      ? candidate : closest);
+  const frameAspect = aspect.variations[step % aspect.variations.length];
+  const frameRatio = frameAspect.ratio;
+  // Alternate the overall size so similar ratios still produce visible motion.
+  const longEdge = step % 2 === 0 ? 288 : 248;
+  const shape = naturalAspect ? {
+    width: longEdge * Math.min(frameRatio, 1),
+    height: longEdge / Math.max(frameRatio, 1),
+    label: frameAspect.label,
+  } : shapes[step % shapes.length];
   const { width, height } = shape;
   return (
     <section
       className="center-gallery"
       aria-label="Changing photographs and proportions"
-      style={
-        {
-          "--image-width": `${imageWidth}px`,
-          "--image-height": `${imageHeight}px`,
-        } as CSSProperties
-      }
     >
       <div className="gallery-drawings">
-        {drawings.map((file, index) => (
+        {drawingFiles.map((file, index) => (
           <img
             key={file}
             src={`${import.meta.env.BASE_URL}playground/${file}`}
@@ -82,8 +84,8 @@ export default function StretchGallery({ works }: { works: Work[] }) {
         className="center-frame"
         style={
           {
-            "--frame-width": `${width}px`,
-            "--frame-height": `${height}px`,
+            "--frame-width": width,
+            "--frame-height": height,
           } as CSSProperties
         }
       >
@@ -95,9 +97,18 @@ export default function StretchGallery({ works }: { works: Work[] }) {
             <img
               key={work.file}
               src={`${import.meta.env.BASE_URL}gallery/${work.file}`}
+              onLoad={naturalAspect ? (event) => {
+                const image = event.currentTarget;
+                if (!image.naturalWidth || !image.naturalHeight) return;
+                const aspect = image.naturalWidth / image.naturalHeight;
+                setImageRatios((current) => current[work.file] === aspect
+                  ? current : { ...current, [work.file]: aspect });
+              } : undefined}
               alt={index === selected ? work.name : ""}
               aria-hidden={index !== selected}
-              className={index === selected ? "is-visible" : ""}
+              className={index === selected
+                ? `is-visible${step > 0 ? " is-revealing" : ""}`
+                : index === previous ? "is-previous" : ""}
               draggable={false}
             />
           ))}
@@ -109,7 +120,6 @@ export default function StretchGallery({ works }: { works: Work[] }) {
       <div className="gallery-wordmark" role="img" aria-label="Turning Tables">
         <div
           className="gallery-wordmark-track"
-          style={{ animationPlayState: paused ? "paused" : "running" }}
           aria-hidden="true"
         >
           {[0, 1].map((copy) => (
@@ -123,14 +133,6 @@ export default function StretchGallery({ works }: { works: Work[] }) {
           ))}
         </div>
       </div>
-      {!reduced && (
-        <button
-          className="center-pause"
-          onClick={() => setPaused((value) => !value)}
-        >
-          {paused ? "Play" : "Pause"}
-        </button>
-      )}
     </section>
   );
 }

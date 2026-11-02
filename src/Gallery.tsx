@@ -1,36 +1,28 @@
 import { useRef, useState } from "react";
 import GalleryVariants from "./GalleryVariants";
 import StretchGallery from "./StretchGallery";
-
-const works = [
-  { file: "mille3.jpg", name: "Painting in the sunshine" },
-  { file: "fornhojden-showcase.webp", name: "Evening showcase" },
-  { file: "dj-workshop.webp", name: "At the decks" },
-  { file: "outdoor-dj.webp", name: "Outdoor session" },
-  { file: "behind-the-scenes.webp", name: "Behind the scenes" },
-  { file: "rf16.webp", name: "Live on the mic" },
-  { file: "studio-producer.webp", name: "In the studio" },
-  { file: "berlin-gathering.webp", name: "Together in Berlin" },
-  { file: "studio-duo.webp", name: "Recording together" },
-  { file: "studio-trio.webp", name: "Studio session" },
-  { file: "vocal-duet.webp", name: "Sharing the mic" },
-];
+import MosaicGallery from "./MosaicGallery";
+import { works } from "./components/galleryContent";
 
 const versions = [
-  { id: "motion", label: "Shape motion" },
+  { id: "natural", label: "Shape motion" },
+  { id: "motion", label: "Shape motion · Preset shapes" },
   { id: "skewed", label: "Skewed carousel" },
+  { id: "vertical", label: "Vertical carousel" },
+  { id: "mosaic", label: "Mosaic carousel" },
   { id: "expanding", label: "Expanding carousel" },
+  { id: "gooey", label: "Gooey carousel" },
 ] as const;
 
-const showVersionSwitcher = false;
+const showVersionSwitcher = true;
 
 export default function Gallery() {
   const [active, setActive] =
-    useState<(typeof versions)[number]["id"]>("motion");
+    useState<(typeof versions)[number]["id"]>("natural");
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   return (
     <main
-      className={`gallery-page ${showVersionSwitcher ? "gallery-comparison" : ""} ${active === "skewed" ? "is-fullscreen-carousel" : ""}`}
+      className={`gallery-page ${showVersionSwitcher ? "gallery-comparison" : ""} ${(active === "skewed" || active === "vertical" || active === "mosaic") ? "is-fullscreen-carousel" : ""}`}
     >
       {showVersionSwitcher && <nav
         className="gallery-switcher"
@@ -40,6 +32,7 @@ export default function Gallery() {
         {versions.map((version, index) => (
           <button
             key={version.id}
+            className="gallery-button"
             ref={(element) => {
               tabs.current[index] = element;
             }}
@@ -50,7 +43,7 @@ export default function Gallery() {
             tabIndex={active === version.id ? 0 : -1}
             onClick={() => setActive(version.id)}
             onKeyDown={(event) => {
-              let next = index;
+              let next: number;
               if (event.key === "ArrowRight")
                 next = (index + 1) % versions.length;
               else if (event.key === "ArrowLeft")
@@ -73,8 +66,10 @@ export default function Gallery() {
         aria-labelledby={showVersionSwitcher ? `tab-${active}` : undefined}
         aria-label={showVersionSwitcher ? undefined : "Shape motion gallery"}
       >
-        {active === "motion" ? (
-          <StretchGallery works={works} />
+        {active === "motion" || active === "natural" ? (
+          <StretchGallery key={active} works={works} naturalAspect={active === "natural"} />
+        ) : active === "mosaic" ? (
+          <MosaicGallery works={works} />
         ) : (
           <GalleryVariants key={active} variant={active} works={works} />
         )}
