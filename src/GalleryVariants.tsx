@@ -3,9 +3,9 @@ import GalleryBrandOverlay from "./components/GalleryBrandOverlay";
 import { defaultCarouselSettings } from "./components/carouselSettingsDefaults";
 import { blendExpandingWaves, expandingWave, gooeyWave } from "./components/expandingWave";
 import { useGooeyPointer } from "./components/useGooeyPointer";
-
 import type { Work } from "./components/galleryContent";
 import { useReducedMotion } from "./components/useReducedMotion";
+
 export type Variant = "skewed" | "vertical" | "expanding" | "gooey";
 
 export default function GalleryVariants({

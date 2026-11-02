@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { defaultCarouselSettings } from './components/carouselSettingsDefaults';
-
 import type { Work } from "./components/galleryContent";
+
 const rowCount = 5;
 
 export default function MosaicGallery({ works }: { works: Work[] }) {

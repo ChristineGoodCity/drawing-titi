@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-
 import { drawingFiles } from "./galleryContent";
 
 export default function GalleryBrandOverlay({ reduced }: { reduced: boolean }) {
