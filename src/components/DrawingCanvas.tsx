@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useImperativeHandle, type Ref, type PointerEvent } from "react";
 import type { Brush, BrushSettings, Point } from "../lib/drawing/brushes";
-import { drawSegment } from "../lib/drawing/engine";
+import { createStrokePath } from "../lib/drawing/engine";
 
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 400;
@@ -28,6 +28,8 @@ export function DrawingCanvas({ brush, settings, ref, onHistoryChange }: Props) 
   }
   const stroke = useRef<{
     pointerId: number;
+    path: ReturnType<typeof createStrokePath>;
+    lastMovement: number;
     point: Point;
     brush: Brush;
     settings: BrushSettings;
@@ -113,8 +115,8 @@ export function DrawingCanvas({ brush, settings, ref, onHistoryChange }: Props) 
       if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
     },
   }));
-  function point(event: PointerEvent<HTMLCanvasElement>): Point {
-    const rect = event.currentTarget.getBoundingClientRect();
+  function point(event: Pick<globalThis.PointerEvent, "clientX" | "clientY" | "pointerType" | "pressure">, canvas: HTMLCanvasElement): Point {
+    const rect = canvas.getBoundingClientRect();
     return {
       x: event.clientX - rect.left,
       y: event.clientY - rect.top,
@@ -127,10 +129,12 @@ export function DrawingCanvas({ brush, settings, ref, onHistoryChange }: Props) 
     if (!ctx) return;
     remember();
     event.currentTarget.setPointerCapture(event.pointerId);
-    const start = point(event);
+    const start = point(event, event.currentTarget);
     const strokeBrush = brush.createStroke?.() ?? brush;
     stroke.current = {
       pointerId: event.pointerId,
+      path: createStrokePath(ctx, strokeBrush, { ...settings }, start),
+      lastMovement: performance.now(),
       point: start,
       brush: strokeBrush,
       settings: { ...settings },
@@ -155,7 +159,10 @@ export function DrawingCanvas({ brush, settings, ref, onHistoryChange }: Props) 
     if (brush.continuous) {
       timer.current = setInterval(() => {
         const active = stroke.current;
-        if (active) active.brush.stamp(ctx, active.point, active.settings);
+        if (active && performance.now() - active.lastMovement >= 80) {
+          active.path.finish();
+          active.brush.stamp(ctx, active.point, active.settings);
+        }
       }, 40);
     }
   }
@@ -164,15 +171,21 @@ export function DrawingCanvas({ brush, settings, ref, onHistoryChange }: Props) 
     if (!active || active.pointerId !== event.pointerId) return;
     const ctx = event.currentTarget.getContext("2d");
     if (!ctx) return;
-    const next = point(event);
-    // Pointer-up reports zero pen pressure; retain the last drawing pressure.
-    if (event.type === "pointerup") next.pressure = active.point.pressure;
-    const dx = next.x - active.point.x;
-    const dy = next.y - active.point.y;
-    if (Math.hypot(dx, dy) < 0.01) return;
-    next.direction = Math.atan2(dy, dx);
-    drawSegment(ctx, active.brush, active.settings, active.point, next);
-    active.point = next;
+    const samples = event.type === "pointermove"
+      ? event.nativeEvent.getCoalescedEvents?.() ?? []
+      : [];
+    for (const sample of samples.length ? samples : [event.nativeEvent]) {
+      const next = point(sample, event.currentTarget);
+      // Pointer-up reports zero pen pressure; retain the last drawing pressure.
+      if (event.type === "pointerup") next.pressure = active.point.pressure;
+      const dx = next.x - active.point.x;
+      const dy = next.y - active.point.y;
+      if (Math.hypot(dx, dy) < 0.01) continue;
+      next.direction = Math.atan2(dy, dx);
+      active.path.add(next);
+      active.point = next;
+      active.lastMovement = performance.now();
+    }
   }
   function end(event: PointerEvent<HTMLCanvasElement>) {
     if (stroke.current?.pointerId !== event.pointerId) return;
@@ -180,7 +193,10 @@ export function DrawingCanvas({ brush, settings, ref, onHistoryChange }: Props) 
       move(event);
       const active = stroke.current;
       const ctx = event.currentTarget.getContext("2d");
-      if (active && ctx) active.brush.finish?.(ctx, active.point, active.settings);
+      if (active && ctx) {
+        active.path.finish();
+        active.brush.finish?.(ctx, active.point, active.settings);
+      }
     }
     // Release stops spraying, while deposited paint can finish running downward.
     if (timer.current !== null) clearInterval(timer.current);
