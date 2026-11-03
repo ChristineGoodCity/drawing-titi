@@ -1,13 +1,31 @@
-import { useEffect, useState, useRef, type PointerEvent } from "react";
+import { useEffect, useState, useRef, useImperativeHandle, type Ref, type PointerEvent } from "react";
 import type { Brush, BrushSettings, Point } from "../lib/drawing/brushes";
 import { drawSegment } from "../lib/drawing/engine";
 
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 400;
 
-type Props = { brush: Brush; settings: BrushSettings; clearVersion: number };
-export function DrawingCanvas({ brush, settings, clearVersion }: Props) {
+export type DrawingCanvasControls = { undo: () => void; clear: () => void };
+type Props = { brush: Brush; settings: BrushSettings; ref: Ref<DrawingCanvasControls>; onHistoryChange: (canUndo: boolean) => void };
+export function DrawingCanvas({ brush, settings, ref, onHistoryChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const history = useRef<{ canvas: HTMLCanvasElement; scale: number }[]>([]);
+  function remember() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const saved = document.createElement("canvas");
+    saved.width = canvas.width;
+    saved.height = canvas.height;
+    saved.getContext("2d")!.drawImage(canvas, 0, 0);
+    history.current.push({ canvas: saved, scale: canvas.getContext("2d")!.getTransform().a });
+    // Bound bitmap memory while always keeping the most recent action.
+    let bytes = history.current.reduce((total, item) => total + item.canvas.width * item.canvas.height * 4, 0);
+    while (history.current.length > 1 && (bytes > 64 * 1024 * 1024 || history.current.length > 20)) {
+      const removed = history.current.shift()!;
+      bytes -= removed.canvas.width * removed.canvas.height * 4;
+    }
+    onHistoryChange(true);
+  }
   const stroke = useRef<{
     pointerId: number;
     point: Point;
@@ -77,11 +95,24 @@ export function DrawingCanvas({ brush, settings, clearVersion }: Props) {
     window.addEventListener("resize", resize);
     return () => { observer.disconnect(); window.removeEventListener("resize", resize); };
   }, []);
-  useEffect(() => {
-    stop();
-    const canvas = canvasRef.current;
-    if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
-  }, [clearVersion]);
+  useImperativeHandle(ref, () => ({
+    undo() {
+      const saved = history.current.pop();
+      const canvas = canvasRef.current;
+      if (!saved || !canvas) return;
+      stop();
+      const ctx = canvas.getContext("2d")!;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(saved.canvas, 0, 0, saved.canvas.width / saved.scale, saved.canvas.height / saved.scale);
+      onHistoryChange(history.current.length > 0);
+    },
+    clear() {
+      stop();
+      remember();
+      const canvas = canvasRef.current;
+      if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+    },
+  }));
   function point(event: PointerEvent<HTMLCanvasElement>): Point {
     const rect = event.currentTarget.getBoundingClientRect();
     return {
@@ -94,6 +125,7 @@ export function DrawingCanvas({ brush, settings, clearVersion }: Props) {
     if (!ready || event.button !== 0 || stroke.current) return;
     const ctx = event.currentTarget.getContext("2d");
     if (!ctx) return;
+    remember();
     event.currentTarget.setPointerCapture(event.pointerId);
     const start = point(event);
     const strokeBrush = brush.createStroke?.() ?? brush;

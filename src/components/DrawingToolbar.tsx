@@ -2,6 +2,8 @@ import { brushes, type BrushSettings } from "../lib/drawing/brushes";
 
 type Props = {
   onClear: () => void;
+  onUndo: () => void;
+  canUndo: boolean;
   brushId: string;
   settings: BrushSettings;
   onBrushChange: (id: string) => void;
@@ -10,6 +12,8 @@ type Props = {
 
 export function DrawingToolbar({
   onClear,
+  onUndo,
+  canUndo,
   brushId,
   settings,
   onBrushChange,
@@ -56,6 +60,14 @@ export function DrawingToolbar({
             />
             <output className="w-5 tabular-nums">{settings.size}</output>
           </label>
+          <button
+            className="pointer-events-auto py-3 text-[9px] leading-normal underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-35"
+            onClick={onUndo}
+            disabled={!canUndo}
+            title="Undo the last stroke or clear"
+          >
+            Revert
+          </button>
           <button className="pointer-events-auto py-3 text-[9px] leading-normal underline underline-offset-4" onClick={onClear}>
             Clear canvas
           </button>

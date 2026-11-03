@@ -13,8 +13,18 @@ type Drip = {
   duration: number
 }
 
+type DripOptions = {
+  wetCore?: boolean
+  widthScale?: number
+  lengthScale?: number
+}
+
 // Each pointer stroke owns its wet paint, so old drips never restart later.
-export function withDrips(base: Brush, wetCore = true): Brush {
+export function withDrips(base: Brush, {
+  wetCore = true,
+  widthScale = 1,
+  lengthScale = 1,
+}: DripOptions = {}): Brush {
   return {
     ...base,
     createStroke() {
@@ -25,7 +35,6 @@ export function withDrips(base: Brush, wetCore = true): Brush {
       let hasMoved = false
       let anchor: Point | undefined
       let heldSince = performance.now()
-      let holdDelay = 2000 + Math.random() * 250
       let pooled = false
       let heading: number | undefined
       let lastDrip: Point | undefined
@@ -38,8 +47,8 @@ export function withDrips(base: Brush, wetCore = true): Brush {
         // Most runs stay moderate; a few reach farther without becoming unbounded.
         const mainLength = size * (Math.random() < 0.25
           ? 1.5 + Math.random() * 0.6
-          : 0.7 + Math.random() * 0.65)
-        const mainWidth = Math.max(2.5, size * (0.15 + Math.random() * 0.08))
+          : 0.7 + Math.random() * 0.65) * lengthScale
+        const mainWidth = Math.max(0.8, Math.max(2.5, size * (0.15 + Math.random() * 0.08)) * widthScale)
         const origin = point.x + (Math.random() - 0.5) * size * 0.04
         const paired = Math.random() < 0.3
         const side = Math.random() < 0.5 ? -1 : 1
@@ -114,6 +123,7 @@ export function withDrips(base: Brush, wetCore = true): Brush {
           return drips.length > 0
         },
         finish(ctx, point, settings) {
+          strokeBase.finish?.(ctx, point, settings)
           if (hasMoved && canDrip(point, settings.size) && Math.random() < 0.5) addDrips(point, settings)
           render(ctx, settings, 0)
         },
@@ -140,7 +150,6 @@ export function withDrips(base: Brush, wetCore = true): Brush {
           if (!anchor || Math.hypot(point.x - anchor.x, point.y - anchor.y) > Math.max(2, size * 0.2)) {
             anchor = { ...point }
             heldSince = now
-            holdDelay = 2000 + Math.random() * 250
             pooled = false
           }
           const step = previous ? Math.hypot(point.x - previous.x, point.y - previous.y) : 0
@@ -161,8 +170,9 @@ export function withDrips(base: Brush, wetCore = true): Brush {
             heading = direction
           }
           // A sustained hold guarantees a pool; don't stack new drips on that same pool.
-          if (!pooled && now - heldSince >= holdDelay) {
-            if (canDrip(point, size)) addDrips(point, settings)
+          if (!pooled && now - heldSince >= 1000) {
+            // Holding adds fresh paint even beside an existing run.
+            addDrips(point, settings)
             pooled = true
           }
           previous = point

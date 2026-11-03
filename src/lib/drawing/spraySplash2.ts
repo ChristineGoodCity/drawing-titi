@@ -61,15 +61,15 @@ function splash(ctx: CanvasRenderingContext2D, point: Point, { color, size }: Br
   ctx.restore()
 }
 
-export const inkSplashBrush: Brush = {
-  id: 'ink-splash', name: 'Ink splash', spacing: 0.14,
+export const spraySplash2Brush: Brush = {
+  id: 'spray-splash-2', name: 'Spray splash 2', spacing: 0.14,
   stamp: paint,
   createStroke() {
     let previous: Point | undefined
     let distance = 0
     let next = 0
     return {
-      ...inkSplashBrush,
+      ...spraySplash2Brush,
       stamp(ctx, point, settings) {
         paint(ctx, point, settings, !previous)
         if (previous) distance += Math.hypot(point.x - previous.x, point.y - previous.y)

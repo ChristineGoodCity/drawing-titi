@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { brushes, type BrushSettings } from "../lib/drawing/brushes";
-import { DrawingCanvas } from "./DrawingCanvas";
+import { DrawingCanvas, type DrawingCanvasControls } from "./DrawingCanvas";
 import { DrawingToolbar } from "./DrawingToolbar";
 
 export function DrawingStudio() {
-  const [clearVersion, setClearVersion] = useState(0);
-  const [brushId, setBrushId] = useState("organic-drip");
+  const canvasRef = useRef<DrawingCanvasControls>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [brushId, setBrushId] = useState(brushes[0].id);
   const [settings, setSettings] = useState<BrushSettings>({
     color: "#000000",
     size: 20,
@@ -18,13 +19,15 @@ export function DrawingStudio() {
       aria-label="Drawing studio"
     >
       <DrawingToolbar
-        onClear={() => setClearVersion((version) => version + 1)}
+        onClear={() => canvasRef.current?.clear()}
+        onUndo={() => canvasRef.current?.undo()}
+        canUndo={canUndo}
         brushId={brushId}
         settings={settings}
         onBrushChange={setBrushId}
         onSettingsChange={setSettings}
       />
-      <DrawingCanvas brush={brush} settings={settings} clearVersion={clearVersion} />
+      <DrawingCanvas ref={canvasRef} brush={brush} settings={settings} onHistoryChange={setCanUndo} />
     </section>
   );
 }

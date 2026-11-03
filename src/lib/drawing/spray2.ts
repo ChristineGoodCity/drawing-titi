@@ -37,41 +37,17 @@ function paint(ctx: CanvasRenderingContext2D, point: Point, { color, size }: Bru
   ctx.restore()
 }
 
-export const organicSprayBrush: Brush = {
-  id: 'organic-spray',
-  name: 'Wall spray',
+export const spray2Brush: Brush = {
+  id: 'spray-2',
+  name: 'Spray 2',
   continuous: true,
   spacing: 0.13,
   stamp: paint,
-  createStroke() {
-    let previous: Point | undefined
-    let anchor: Point | undefined
-    let distance = 0
-    let startedAt: number | undefined
-    let heldSince = 0
-    return {
-      ...organicSprayBrush,
-      stamp(ctx, point, settings) {
-        const now = performance.now()
-        startedAt ??= now
-        if (previous) distance += Math.hypot(point.x - previous.x, point.y - previous.y)
-        if (!anchor || Math.hypot(point.x - anchor.x, point.y - anchor.y) > Math.max(2, settings.size * 0.1)) {
-          anchor = { ...point }
-          heldSince = now
-        }
-        // A narrow first touch grows into the stroke; lingering adds only a little spread.
-        const progress = Math.min(1, Math.max(distance / (settings.size * 2), (now - startedAt) / 600))
-        const taper = 0.55 + 0.45 * progress * (2 - progress)
-        const spread = 1 + 0.2 * Math.min(1, Math.max(0, now - heldSince - 300) / 2000)
-        paint(ctx, point, { ...settings, size: settings.size * taper * spread })
-        previous = { ...point }
-      },
-    }
-  },
+
 }
 
-export const organicDripBrush = withDrips({
-  ...organicSprayBrush,
-  id: 'organic-drip',
-  name: 'Wall drip',
-}, false)
+export const spray2DripBrush = withDrips({
+  ...spray2Brush,
+  id: 'spray-2-drip',
+  name: 'Spray 2 drip',
+}, { wetCore: false })

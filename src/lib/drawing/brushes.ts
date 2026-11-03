@@ -1,24 +1,25 @@
+import { withHoldGrowth } from "./holdSize";
 import { posca15mmBrush } from "./posca15mm";
 import { poscaBrush } from "./posca";
-import { organicSprayBrush, organicDripBrush } from "./organicSpray";
-import { dirtySprayBrush, dirtyDripBrush } from "./dirtySpray";
-import { inkSplashBrush } from "./inkSplash";
-import { dryPaintBrush } from "./dryPaint";
-import { sprayBrush, originalSprayBrush } from "./spray";
+import { spray2Brush, spray2DripBrush } from "./spray2";
+import { spraySplash1Brush, spraySplash1DripBrush } from "./spraySplash1";
+import { spraySplash2Brush } from "./spraySplash2";
+import { spray3Brush } from "./spray3";
+import { spray1Brush, spray1DripBrush } from "./spray1";
 
 import type { Brush } from "./types";
 export type { Brush, BrushSettings, Point } from "./types";
 
 // Add your own brush here. A stamp can draw shapes or a transparent image.
-export const brushes: Brush[] = [
-  sprayBrush,
-  originalSprayBrush,
-  dirtySprayBrush,
-  dirtyDripBrush,
-  organicSprayBrush,
-  organicDripBrush,
-  dryPaintBrush,
-  inkSplashBrush,
+const baseBrushes: Brush[] = [
+  spray1Brush,
+  spray1DripBrush,
+  spray2Brush,
+  spray2DripBrush,
+  spray3Brush,
+  spraySplash1Brush,
+  spraySplash1DripBrush,
+  spraySplash2Brush,
   poscaBrush,
   posca15mmBrush,
   {
@@ -70,21 +71,6 @@ export const brushes: Brush[] = [
       ctx.fill();
     },
   },
-  {
-    id: "grain",
-    name: "Grain",
-    stamp(ctx, point, { color, size }) {
-      ctx.fillStyle = color;
-      for (let i = 0; i < 12; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = (Math.sqrt(Math.random()) * size * point.pressure) / 2;
-        ctx.fillRect(
-          point.x + Math.cos(angle) * radius,
-          point.y + Math.sin(angle) * radius,
-          0.8,
-          0.8,
-        );
-      }
-    },
-  },
 ];
+
+export const brushes: Brush[] = baseBrushes.map(withHoldGrowth);
