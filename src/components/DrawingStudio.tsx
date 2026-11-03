@@ -18,6 +18,13 @@ export function DrawingStudio() {
       className="relative h-full w-full overflow-hidden bg-background"
       aria-label="Drawing studio"
     >
+      <img
+        src={`${import.meta.env.BASE_URL}playground/Frame%2013.svg`}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className="pointer-events-none absolute left-1/2 top-1/2 h-auto w-[55%] -translate-x-1/2 -translate-y-1/2 select-none object-contain opacity-[0.03]"
+      />
       <DrawingToolbar
         onClear={() => canvasRef.current?.clear()}
         onUndo={() => canvasRef.current?.undo()}
@@ -27,7 +34,12 @@ export function DrawingStudio() {
         onBrushChange={setBrushId}
         onSettingsChange={setSettings}
       />
-      <DrawingCanvas ref={canvasRef} brush={brush} settings={settings} onHistoryChange={setCanUndo} />
+      <DrawingCanvas
+        ref={canvasRef}
+        brush={brush}
+        settings={settings}
+        onHistoryChange={setCanUndo}
+      />
     </section>
   );
 }
