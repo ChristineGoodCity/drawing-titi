@@ -11,13 +11,21 @@ npm run dev
 
 `npm run build` checks TypeScript and builds for production. `npm run lint` runs the linter.
 
+## Try your Teachable Machine model
+
+Click **Check drawing** to run the exported model locally in your browser. The result panel shows both trained classes and the exact snapshot checked; it does not save, publish, or approve submissions. Empty canvases are rejected before prediction. The entire drawing is fitted into a white 224 × 224 square to avoid cropping off edge content. Use similarly prepared images when training and evaluating.
+
+Replace `public/my_model/model.json`, `metadata.json`, and `weights.bin` together to update the model, then reload the app. The model loads on the first check. TensorFlow.js 1.3.1 is pinned to the Teachable Machine package's peer dependency; its bundled TypeScript enums require `erasableSyntaxOnly: false`. Browser predictions are for experimentation, not enforceable publication controls.
+
 ## Add a brush
 
 Add a `Brush` to `src/lib/drawing/brushes.ts`. Each brush supplies an ID, a name, and a `stamp` function that draws at a point using the selected color and size. The toolbar discovers registered brushes automatically. The engine interpolates stamps between pointer positions. For image brushes, preload a transparent image and call `ctx.drawImage` in the stamp function.
 
 `src/components/DrawingCanvas.tsx` handles pointer capture and coordinate mapping. `src/lib/drawing/engine.ts` handles stroke interpolation, independently of React. Brush settings are frozen for each stroke.
 
-The app includes pen, paint marker, grain, dry paint, ink splash, and spray variants, size and color controls, and clear. Artwork is in memory only. Undo, export, and advanced smoothing are future additions. The drawing surface uses 1200 × 400 logical coordinates with a 2×–4× backing canvas based on display pixel density and rendered width. Resizing preserves artwork; new strokes use the higher resolution.
+The app includes pen, paint marker, Posca, and spray brushes, size and color controls, undo, and clear. Artwork stays in memory. The canvas follows the displayed size and uses device pixel density (up to 4×) for its backing bitmap. Resizing preserves artwork.
+
+The model check uses a 90% allowed threshold for **Pass** and an 85% inappropriate threshold for **Blocked**; other results need review. These thresholds and their displayed values share constants in `src/components/DrawingModelCheck.tsx`. Model loading is isolated in `src/lib/drawingModel.ts`.
 
 ## Structure
 
@@ -28,8 +36,4 @@ The app includes pen, paint marker, grain, dry paint, ink splash, and spray vari
 
 Tailwind uses the official Vite plugin. Component styling uses utility classes; shared colors and fonts live in the CSS theme.
 
-Spray uses the supplied `src/assets/brushes/spray-source.png`; Spray Drip uses the generated `src/assets/brushes/spray-original.png`. Each has its own texture cache. Its loader converts brightness to transparency and caches a color-tinted tip. Holding down deposits more paint; release, cancellation, changing brushes, window blur, and hiding the tab stop the flow.
-
-The original spray tip was created with built-in imagegen. Prompt: a centered black aerosol dab with a dense center, fine discrete droplets fading into sparse overspray, clean transparent margins, and no text, can, paper, or border.
-
-Image brushes share `src/lib/drawing/imageTip.ts` for one-time image decoding and cached tinting. Dry paint reuses its scratch canvas and grain pattern between stamps. Brush interfaces live in `src/lib/drawing/types.ts`; the registry only assembles brush options.
+Image brushes share `src/lib/drawing/imageTip.ts` for image decoding and tinted texture caching. Brush interfaces live in `src/lib/drawing/types.ts`; the registry assembles the available brushes. Holding down deposits paint; release, cancellation, changing brushes, window blur, and hiding the tab stop the flow.

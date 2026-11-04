@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { brushes, type BrushSettings } from "../lib/drawing/brushes";
 import { DrawingCanvas, type DrawingCanvasControls } from "./DrawingCanvas";
 import { DrawingToolbar } from "./DrawingToolbar";
+import { DrawingModelCheck } from "./DrawingModelCheck";
 
 export function DrawingStudio() {
   const canvasRef = useRef<DrawingCanvasControls>(null);
@@ -40,6 +41,7 @@ export function DrawingStudio() {
         settings={settings}
         onHistoryChange={setCanUndo}
       />
+      <DrawingModelCheck canvasRef={canvasRef} />
     </section>
   );
 }
