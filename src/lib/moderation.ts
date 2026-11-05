@@ -17,7 +17,7 @@ export async function checkDrawing(image: string): Promise<ModerationResult> {
   });
   if (!response.headers.get("content-type")?.includes("application/json")) {
     throw new Error(
-      "The moderation server is unavailable. Run npm run dev locally; static hosting alone cannot run Gemini checks.",
+      "The moderation endpoint is missing or unavailable. Deploy the api/moderate function with the website, then try again.",
     );
   }
   const result = await response.json();

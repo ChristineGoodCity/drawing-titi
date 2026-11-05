@@ -71,7 +71,7 @@ export function parseResult(value: unknown) {
 
 export function moderationHandler(apiKey: string, request = fetch) {
   let inFlight = false;
-  return async (req: IncomingMessage, res: ServerResponse) => {
+  return async (req: IncomingMessage & { body?: unknown }, res: ServerResponse) => {
     const reply = (status: number, data: unknown) => {
       res.writeHead(status, {
         "Content-Type": "application/json",
@@ -83,7 +83,7 @@ export function moderationHandler(apiKey: string, request = fetch) {
       reply(405, { error: "Use POST to check a drawing." });
       return;
     }
-    // This local test endpoint must not accept cross-origin browser requests.
+    // Accept same-origin browser requests for both local and hosted endpoints.
     if (req.headers.origin) {
       try {
         if (new URL(req.headers.origin).host !== req.headers.host) {
@@ -98,7 +98,7 @@ export function moderationHandler(apiKey: string, request = fetch) {
     if (!apiKey) {
       reply(503, {
         error:
-          "Add GEMINI_API_KEY to .env.local and restart npm run dev. The drawing has not been checked.",
+          "Configure GEMINI_API_KEY on the server (Vercel environment settings or local .env), then redeploy or restart. The drawing has not been checked.",
       });
       return;
     }
@@ -112,22 +112,29 @@ export function moderationHandler(apiKey: string, request = fetch) {
     }
     inFlight = true;
     try {
-      let body = "";
-      for await (const chunk of req) {
-        body += chunk.toString();
-        if (Buffer.byteLength(body) > 6_000_000) {
-          reply(413, { error: "Drawing is too large. Try a smaller drawing." });
+      let input: unknown = req.body;
+      // Vercel may already have parsed JSON; Vite supplies the raw stream.
+      if (input === undefined) {
+        let body = "";
+        for await (const chunk of req) {
+          body += chunk.toString();
+          if (Buffer.byteLength(body) > 4_000_000) {
+            reply(413, { error: "Drawing is too large. Try a smaller drawing." });
+            return;
+          }
+        }
+        try {
+          input = JSON.parse(body);
+        } catch {
+          reply(400, { error: "Invalid drawing request." });
           return;
         }
-      }
-      let input;
-      try {
-        input = JSON.parse(body);
-      } catch {
-        reply(400, { error: "Invalid drawing request." });
+      } else if (Buffer.byteLength(JSON.stringify(input)) > 4_000_000) {
+        reply(413, { error: "Drawing is too large. Try a smaller drawing." });
         return;
       }
-      const image = typeof input?.image === "string" ? input.image : "";
+      const imageValue = input && typeof input === "object" && "image" in input ? input.image : undefined;
+      const image = typeof imageValue === "string" ? imageValue : "";
       const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(
         image,
       );
