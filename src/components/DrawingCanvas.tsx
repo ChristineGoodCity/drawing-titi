@@ -155,23 +155,15 @@ export function DrawingCanvas({
         .getImageData(0, 0, canvas.width, canvas.height).data;
       if (!data.some((value, index) => index % 4 === 3 && value > 0))
         return null;
-      // Preserve the entire drawing in a square so the model's center crop
-      // cannot discard marks near the sides of the wide drawing surface.
+      // Limit moderation uploads while preserving the full drawing and aspect ratio.
       const snapshot = document.createElement("canvas");
-      snapshot.width = snapshot.height = 224;
+      const scale = Math.min(1, 1024 / Math.max(canvas.width, canvas.height));
+      snapshot.width = Math.max(1, Math.round(canvas.width * scale));
+      snapshot.height = Math.max(1, Math.round(canvas.height * scale));
       const ctx = snapshot.getContext("2d")!;
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, 224, 224);
-      const scale = 224 / Math.max(canvas.width, canvas.height);
-      const width = canvas.width * scale;
-      const height = canvas.height * scale;
-      ctx.drawImage(
-        canvas,
-        (224 - width) / 2,
-        (224 - height) / 2,
-        width,
-        height,
-      );
+      ctx.fillRect(0, 0, snapshot.width, snapshot.height);
+      ctx.drawImage(canvas, 0, 0, snapshot.width, snapshot.height);
       return snapshot;
     },
     undo() {

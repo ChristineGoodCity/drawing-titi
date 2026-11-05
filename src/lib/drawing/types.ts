@@ -8,6 +8,7 @@ export type BrushSettings = { color: string; size: number };
 export interface Brush {
   id: string;
   name: string;
+  defaultSize?: number;
   createStroke?: () => Brush;
   prepare?: () => Promise<void>;
   continuous?: boolean;

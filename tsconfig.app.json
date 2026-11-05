@@ -19,8 +19,7 @@
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    /* Teachable Machine's TensorFlow dependency includes TypeScript enums. */
-    "erasableSyntaxOnly": false,
+    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"]

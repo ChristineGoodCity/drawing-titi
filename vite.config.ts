@@ -1,17 +1,24 @@
-import tailwindcss from '@tailwindcss/vite'
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv } from "vite";
+import { geminiModeration } from "./server/moderationPlugin.ts";
 
-// https://vite.dev/config/
-export default defineConfig({
-  base: '/drawing-titi/',
-  plugins: [react(), tailwindcss()],
-  build: {
-    rollupOptions: {
-      input: {
-        main: 'index.html',
-        gallery: 'gallery/index.html',
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "GEMINI_");
+  return {
+    base: "/drawing-titi/",
+    plugins: [
+      react(),
+      tailwindcss(),
+      geminiModeration(env.GEMINI_API_KEY || ""),
+    ],
+    build: {
+      rollupOptions: {
+        input: {
+          main: "index.html",
+          gallery: "gallery/index.html",
+        },
       },
     },
-  },
-})
+  };
+});

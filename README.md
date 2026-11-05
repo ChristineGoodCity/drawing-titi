@@ -1,6 +1,6 @@
 # Drawing Titi
 
-A small React + TypeScript drawing component using native Canvas 2D and Pointer Events. No drawing library.
+A React + TypeScript drawing studio and gallery using native Canvas 2D and Pointer Events.
 
 ## Development
 
@@ -9,13 +9,22 @@ npm install
 npm run dev
 ```
 
-`npm run build` checks TypeScript and builds for production. `npm run lint` runs the linter.
+`npm run build` checks TypeScript and builds both pages. `npm run lint` runs the linter. `npm test` runs mocked moderation tests without API calls.
 
-## Try your Teachable Machine model
+## Try Gemini moderation
 
-Click **Check drawing** to run the exported model locally in your browser. The result panel shows both trained classes and the exact snapshot checked; it does not save, publish, or approve submissions. Empty canvases are rejected before prediction. The entire drawing is fitted into a white 224 × 224 square to avoid cropping off edge content. Use similarly prepared images when training and evaluating.
+Moderation uses `gemini-3.5-flash-lite` to check handwritten words and drawings against the project policies.
 
-Replace `public/my_model/model.json`, `metadata.json`, and `weights.bin` together to update the model, then reload the app. The model loads on the first check. TensorFlow.js 1.3.1 is pinned to the Teachable Machine package's peer dependency; its bundled TypeScript enums require `erasableSyntaxOnly: false`. Browser predictions are for experimentation, not enforceable publication controls.
+1. Create an API key for your Gemini project in Google AI Studio.
+2. Add `GEMINI_API_KEY=your-key` to `.env.local` (ignored by Git). Never use a `VITE_` prefix for the key.
+3. Run `npm install` and restart `npm run dev`.
+4. Draw something and click **Check drawing**. The PNG snapshot is capped at 1,024 pixels on its longest side, preserving aspect ratio without cropping or upscaling. This reduced snapshot is sent to Google; the panel shows the decision, reason, recognized text and flagged words.
+
+The key stays in Vite's server process. A local `/drawing-titi/api/moderate` endpoint sends the request to Gemini with structured JSON output. Missing keys, quota failures, timeouts and invalid responses are errors, never approvals; incomplete or safety-filtered responses require manual review. One request runs at a time, with a 6 MB body limit and a 45-second upstream timeout. No automatic retries consume extra quota.
+
+This endpoint is available in `npm run dev` and `npm run preview` only. Static deployments (including GitHub Pages) need a separately hosted backend with authentication and rate limiting before enabling public moderation. This panel does not publish or enforce submissions. Review false positives and missed examples before relying on it. Google handles submitted images under your account's applicable API terms. Quotas are project/model-specific; check AI Studio for current limits.
+
+Live accuracy testing requires your Gemini key.
 
 ## Add a brush
 
@@ -25,15 +34,26 @@ Add a `Brush` to `src/lib/drawing/brushes.ts`. Each brush supplies an ID, a name
 
 The app includes pen, paint marker, Posca, and spray brushes, size and color controls, undo, and clear. Artwork stays in memory. The canvas follows the displayed size and uses device pixel density (up to 4×) for its backing bitmap. Resizing preserves artwork.
 
-The model check uses a 90% allowed threshold for **Pass** and an 85% inappropriate threshold for **Blocked**; other results need review. These thresholds and their displayed values share constants in `src/components/DrawingModelCheck.tsx`. Model loading is isolated in `src/lib/drawingModel.ts`.
-
 ## Structure
 
-- `src/components/`: drawing studio, toolbar, and canvas components.
+- `src/components/`: drawing studio, toolbar, canvas, moderation panel and gallery helpers.
+- `src/lib/moderation.ts`: browser client for the moderation endpoint.
+- `server/gemini.ts`: Gemini requests and result validation.
+- `server/moderationPlugin.ts`: local Vite endpoint registration.
+- `server/moderationWords.ts` and `server/visualPolicy.ts`: editable moderation rules.
 - `src/lib/drawing/`: framework-independent brush definitions and stroke engine.
 - `src/styles/globals.css`: Tailwind CSS 4 import, theme tokens, and base styles.
-- `src/App.tsx`: application composition.
+- `src/App.tsx`: drawing page composition.
+- `src/gallery-main.tsx` and `src/Gallery.tsx`: gallery entry point and view selection.
 
 Tailwind uses the official Vite plugin. Component styling uses utility classes; shared colors and fonts live in the CSS theme.
 
 Image brushes share `src/lib/drawing/imageTip.ts` for image decoding and tinted texture caching. Brush interfaces live in `src/lib/drawing/types.ts`; the registry assembles the available brushes. Holding down deposits paint; release, cancellation, changing brushes, window blur, and hiding the tab stop the flow.
+
+## Custom word policy
+
+Edit `server/moderationWords.ts` to change the English banned-word/phrase list. This is our strict project policy, not Google's internal vocabulary. It includes “suck” and other words with potentially innocent uses. Gemini receives the list plus instructions to recognize other profanity, slurs and abusive language. The server independently matches recognized text against the list and forces a flag, even when Gemini considers the word harmless. Matching ignores case, punctuation and Unicode width, uses whole words/phrases, and does not flag “class” for containing “ass”. Obfuscated handwriting and other languages still rely on Gemini's interpretation; this is not a complete list of all offensive words. Recheck the drawing after changing policy; old results are not recomputed.
+
+## Custom drawing policy
+
+Edit `server/visualPolicy.ts` for visual rules. Recognizable genitals, exposed breasts with nipples and bare buttocks (including simple or rotated doodles) are flagged. Plausible but ambiguous anatomical drawings require review; ordinary abstract shapes without anatomical cues should not automatically be flagged. The server validates separate genital and nude-body findings. Prompt changes do not guarantee recognition; recheck real examples to evaluate the model.

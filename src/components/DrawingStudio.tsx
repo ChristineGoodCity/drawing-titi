@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { brushes, type BrushSettings } from "../lib/drawing/brushes";
 import { DrawingCanvas, type DrawingCanvasControls } from "./DrawingCanvas";
 import { DrawingToolbar } from "./DrawingToolbar";
-import { DrawingModelCheck } from "./DrawingModelCheck";
+import { DrawingModeration } from "./DrawingModeration";
 
 export function DrawingStudio() {
   const canvasRef = useRef<DrawingCanvasControls>(null);
@@ -10,7 +10,7 @@ export function DrawingStudio() {
   const [brushId, setBrushId] = useState(brushes[0].id);
   const [settings, setSettings] = useState<BrushSettings>({
     color: "#000000",
-    size: 20,
+    size: brushes[0].defaultSize ?? 20,
   });
   const brush = brushes.find((item) => item.id === brushId) ?? brushes[0];
 
@@ -32,7 +32,15 @@ export function DrawingStudio() {
         canUndo={canUndo}
         brushId={brushId}
         settings={settings}
-        onBrushChange={setBrushId}
+        onBrushChange={(id) => {
+          setBrushId(id);
+          const defaultSize = brushes.find(
+            (item) => item.id === id,
+          )?.defaultSize;
+          if (defaultSize !== undefined) {
+            setSettings((current) => ({ ...current, size: defaultSize }));
+          }
+        }}
         onSettingsChange={setSettings}
       />
       <DrawingCanvas
@@ -41,7 +49,7 @@ export function DrawingStudio() {
         settings={settings}
         onHistoryChange={setCanUndo}
       />
-      <DrawingModelCheck canvasRef={canvasRef} />
+      <DrawingModeration canvasRef={canvasRef} />
     </section>
   );
 }
