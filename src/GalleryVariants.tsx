@@ -17,7 +17,8 @@ export default function GalleryVariants({
 }) {
   const vertical = variant === "vertical";
   const skewed = variant === "skewed" || vertical;
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(() =>
+    variant === "skewed" ? Math.min(5, Math.max(0, works.length - 1)) : 0);
   const settings = defaultCarouselSettings;
   const reduced = useReducedMotion();
   useEffect(() => {

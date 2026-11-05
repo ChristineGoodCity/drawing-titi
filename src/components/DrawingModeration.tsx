@@ -79,7 +79,7 @@ export function DrawingModeration({
             <p className="mt-3 whitespace-pre-wrap break-words">
               {result.reason}
             </p>
-            {result.nudeBodyDrawing !== undefined && (
+            {/* {result.nudeBodyDrawing !== undefined && (
               <p className="mt-2">
                 Exposed breasts / buttocks:{" "}
                 {result.nudeBodyDrawing ? "Detected" : "Not detected"}
@@ -90,7 +90,7 @@ export function DrawingModeration({
                 Genital drawing:{" "}
                 {result.genitalDrawing ? "Detected" : "Not detected"}
               </p>
-            )}
+            )} */}
             {!!result.offensiveWords?.length && (
               <p className="mt-2 break-words">
                 Flagged words: {result.offensiveWords.join(", ")}
