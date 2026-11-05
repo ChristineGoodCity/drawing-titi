@@ -63,3 +63,5 @@ Edit `server/visualPolicy.ts` for visual rules. Recognizable genitals, exposed b
 Import this repository as a Vite project. `vercel.json` builds the static site and `api/moderate.ts` provides the server endpoint. Add `GEMINI_API_KEY` in Vercel project Settings → Environment Variables for Production (and Preview if needed), then deploy again. GitHub Actions secrets do not automatically populate Vercel environment variables. Never prefix the key with `VITE_`.
 
 Deploy the branch containing these files. Visiting `/api/moderate` should return a JSON “Use POST” error rather than a 404; then test a drawing from the site. The function allows 60 seconds, with a 45-second Gemini timeout. No API key is bundled into the frontend.
+
+The root TypeScript configuration uses NodeNext and rewrites relative `.ts` imports to `.js` for Vercel’s emitted functions. Keep these settings: the browser build alone does not verify deployed server module loading.
