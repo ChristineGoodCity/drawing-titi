@@ -12,7 +12,7 @@ export type { Brush, BrushSettings, Point } from "./types";
 
 // Add your own brush here. A stamp can draw shapes or a transparent image.
 const baseBrushes: Brush[] = [
-  { ...spray2DripBrush, id: "main-brush", name: "Main brush", defaultSize: 40 },
+  { ...spray2DripBrush, id: "main-brush", name: "Main brush", defaultSize: 35 },
   { ...spray2DripBrush, id: "main-brush-m", name: "Main brush - M", defaultSize: 20 },
   spray1Brush,
   spray1DripBrush,
