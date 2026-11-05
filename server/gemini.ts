@@ -1,3 +1,4 @@
+import { requestGemini } from "./geminiRequest.ts";
 import { VISUAL_POLICY } from "./visualPolicy.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { findBannedWords, WORD_POLICY } from "./moderationWords.ts";
@@ -71,7 +72,10 @@ export function parseResult(value: unknown) {
 
 export function moderationHandler(apiKey: string, request = fetch) {
   let inFlight = false;
-  return async (req: IncomingMessage & { body?: unknown }, res: ServerResponse) => {
+  return async (
+    req: IncomingMessage & { body?: unknown },
+    res: ServerResponse,
+  ) => {
     const reply = (status: number, data: unknown) => {
       res.writeHead(status, {
         "Content-Type": "application/json",
@@ -119,7 +123,9 @@ export function moderationHandler(apiKey: string, request = fetch) {
         for await (const chunk of req) {
           body += chunk.toString();
           if (Buffer.byteLength(body) > 4_000_000) {
-            reply(413, { error: "Drawing is too large. Try a smaller drawing." });
+            reply(413, {
+              error: "Drawing is too large. Try a smaller drawing.",
+            });
             return;
           }
         }
@@ -133,7 +139,10 @@ export function moderationHandler(apiKey: string, request = fetch) {
         reply(413, { error: "Drawing is too large. Try a smaller drawing." });
         return;
       }
-      const imageValue = input && typeof input === "object" && "image" in input ? input.image : undefined;
+      const imageValue =
+        input && typeof input === "object" && "image" in input
+          ? input.image
+          : undefined;
       const image = typeof imageValue === "string" ? imageValue : "";
       const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(
         image,
@@ -146,7 +155,7 @@ export function moderationHandler(apiKey: string, request = fetch) {
         reply(400, { error: "Expected a PNG drawing." });
         return;
       }
-      const response = await request(
+      const response = await requestGemini(
         `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
         {
           method: "POST",
@@ -154,13 +163,11 @@ export function moderationHandler(apiKey: string, request = fetch) {
             "Content-Type": "application/json",
             "x-goog-api-key": apiKey,
           },
-          signal: AbortSignal.timeout(45_000),
           body: JSON.stringify({
             systemInstruction: {
               parts: [
                 {
-                  text:
-                    MODERATION_INSTRUCTIONS,
+                  text: MODERATION_INSTRUCTIONS,
                 },
               ],
             },
@@ -179,6 +186,7 @@ export function moderationHandler(apiKey: string, request = fetch) {
             },
           }),
         },
+        request,
       );
       if (!response.ok) {
         const messages: Record<number, string> = {
@@ -224,14 +232,27 @@ export function moderationHandler(apiKey: string, request = fetch) {
         .map((p) => p.text)
         .join("");
       reply(200, parseResult(JSON.parse(text || "")));
-    } catch {
-      reply(502, {
-        error:
-          "Could not complete the Gemini check (network, timeout or invalid response). Please retry. This drawing remains unchecked.",
+    } catch (error) {
+      const name = error instanceof Error ? error.name : "UnknownError";
+      const timeout = name === "TimeoutError" || name === "AbortError";
+      const invalid =
+        name === "SyntaxError" ||
+        (error instanceof Error && error.message === "Invalid result");
+      const kind = timeout
+        ? "timeout"
+        : invalid
+          ? "invalid_response"
+          : "network_error";
+      console.warn("[moderation]", JSON.stringify({ kind }));
+      reply(timeout ? 504 : 502, {
+        error: timeout
+          ? "Gemini did not finish within 43 seconds. This drawing remains unchecked. Try again later."
+          : invalid
+            ? "Gemini returned an invalid assessment. This drawing remains unchecked. Please retry."
+            : "Could not connect to Gemini or read its response. This drawing remains unchecked. Please retry.",
       });
     } finally {
       inFlight = false;
     }
   };
 }
-

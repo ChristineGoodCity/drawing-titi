@@ -20,7 +20,7 @@ Moderation uses `gemini-3.5-flash-lite` to check handwritten words and drawings 
 3. Run `npm install` and restart `npm run dev`.
 4. Draw something and click **Check drawing**. The PNG snapshot is capped at 1,024 pixels on its longest side, preserving aspect ratio without cropping or upscaling. This reduced snapshot is sent to Google; the panel shows the decision, reason, recognized text and flagged words.
 
-The key stays in Vite's server process. A local `/api/moderate` endpoint sends the request to Gemini with structured JSON output. Missing keys, quota failures, timeouts and invalid responses are errors, never approvals; incomplete or safety-filtered responses require manual review. One request runs at a time, with a 4 MB body limit and a 45-second upstream timeout. No automatic retries consume extra quota.
+The key stays in Vite's server process. A local `/api/moderate` endpoint sends the request to Gemini with structured JSON output. Missing keys, quota failures, timeouts and invalid responses are errors, never approvals; incomplete or safety-filtered responses require manual review. One request runs at a time, with a 4 MB body limit and a 43-second total upstream deadline. Temporary HTTP 500/502/503/504 errors are retried once after one second when time remains. A retry may consume another API request; quota/authentication errors are not retried. Server logs record HTTP status, provider status, attempt and elapsed time without images, prompts or keys.
 
 The endpoint runs locally through Vite and on Vercel through `api/moderate.ts`. The single-request guard is per process, not a global quota across Vercel instances. Configure hosted rate limiting and appropriate access controls before opening moderation to unrestricted traffic. This panel does not publish or enforce submissions. Review false positives and missed examples before relying on it. Google handles submitted images under your account's applicable API terms. Quotas are project/model-specific; check AI Studio for current limits.
 
@@ -62,6 +62,6 @@ Edit `server/visualPolicy.ts` for visual rules. Recognizable genitals, exposed b
 
 Import this repository as a Vite project. `vercel.json` builds the static site and `api/moderate.ts` provides the server endpoint. Add `GEMINI_API_KEY` in Vercel project Settings → Environment Variables for Production (and Preview if needed), then deploy again. GitHub Actions secrets do not automatically populate Vercel environment variables. Never prefix the key with `VITE_`.
 
-Deploy the branch containing these files. Visiting `/api/moderate` should return a JSON “Use POST” error rather than a 404; then test a drawing from the site. The function allows 60 seconds, with a 45-second Gemini timeout. No API key is bundled into the frontend.
+Deploy the branch containing these files. Visiting `/api/moderate` should return a JSON “Use POST” error rather than a 404; then test a drawing from the site. The function allows 60 seconds, with a 43-second Gemini deadline. No API key is bundled into the frontend.
 
 The root TypeScript configuration uses NodeNext and rewrites relative `.ts` imports to `.js` for Vercel’s emitted functions. Keep these settings: the browser build alone does not verify deployed server module loading.
