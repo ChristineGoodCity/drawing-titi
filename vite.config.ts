@@ -6,7 +6,6 @@ import { geminiModeration } from "./server/moderationPlugin.ts";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "GEMINI_");
   return {
-    base: "/drawing-titi/",
     plugins: [
       react(),
       tailwindcss(),

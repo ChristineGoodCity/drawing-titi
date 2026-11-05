@@ -20,9 +20,9 @@ Moderation uses `gemini-3.5-flash-lite` to check handwritten words and drawings 
 3. Run `npm install` and restart `npm run dev`.
 4. Draw something and click **Check drawing**. The PNG snapshot is capped at 1,024 pixels on its longest side, preserving aspect ratio without cropping or upscaling. This reduced snapshot is sent to Google; the panel shows the decision, reason, recognized text and flagged words.
 
-The key stays in Vite's server process. A local `/drawing-titi/api/moderate` endpoint sends the request to Gemini with structured JSON output. Missing keys, quota failures, timeouts and invalid responses are errors, never approvals; incomplete or safety-filtered responses require manual review. One request runs at a time, with a 6 MB body limit and a 45-second upstream timeout. No automatic retries consume extra quota.
+The key stays in Vite's server process. A local `/api/moderate` endpoint sends the request to Gemini with structured JSON output. Missing keys, quota failures, timeouts and invalid responses are errors, never approvals; incomplete or safety-filtered responses require manual review. One request runs at a time, with a 6 MB body limit and a 45-second upstream timeout. No automatic retries consume extra quota.
 
-This endpoint is available in `npm run dev` and `npm run preview` only. Static deployments (including GitHub Pages) need a separately hosted backend with authentication and rate limiting before enabling public moderation. This panel does not publish or enforce submissions. Review false positives and missed examples before relying on it. Google handles submitted images under your account's applicable API terms. Quotas are project/model-specific; check AI Studio for current limits.
+This endpoint is available in `npm run dev` and `npm run preview` only. A production deployment needs a server endpoint (such as a Vercel Function) with authentication and rate limiting before enabling public moderation. This panel does not publish or enforce submissions. Review false positives and missed examples before relying on it. Google handles submitted images under your account's applicable API terms. Quotas are project/model-specific; check AI Studio for current limits.
 
 Live accuracy testing requires your Gemini key.
 
