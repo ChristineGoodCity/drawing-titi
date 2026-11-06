@@ -510,7 +510,8 @@ button:focus-visible {
   top: 24px;
   right: 24px;
   z-index: 11;
-  color: #171714;
+  color: #fff;
+  mix-blend-mode: difference;
   font-size: 9px;
   text-underline-offset: 4px;
 }

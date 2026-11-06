@@ -23,7 +23,7 @@ const showVersionSwitcher = true;
 
 export default function Gallery() {
   const [active, setActive] =
-    useState<(typeof versions)[number]["id"]>("natural");
+    useState<(typeof versions)[number]["id"]>("skewed");
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   return (
     <main
